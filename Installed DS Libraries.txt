@@ -15,4 +15,9 @@ Must Have Libraries to Setup the environment for a Data-Science Project.
 12) Plotly -- pip3 install plotly -- 4.6.0
 13) NLTK -- pip3 install nltk -- 3.5
 14) Gensim -- pip3 install gensim -- ####
-14) Seaborn -- pip3 install seaborn -- 0.10.0
+15) Seaborn -- pip3 install seaborn -- 0.10.0
+
+Jupyter Environment
+1) JupyterLab -- pip3 install jupyterlab -- 2.1.0
+2) Notebook -- pip3 install notebook -- 6.0.3
+3) Voila -- pip3 install voil -- 0.1.21
