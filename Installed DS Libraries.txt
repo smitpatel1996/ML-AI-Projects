@@ -1,4 +1,4 @@
-Must Have Libraries to Setup the environment for a Data-Science Project.
+Must Have Libraries to Setup the environment for any Data-Science Project.
 (Along with the installation commands and installed versions.)
 
 1) NumPy -- pip3 install numpy -- 1.18.1
