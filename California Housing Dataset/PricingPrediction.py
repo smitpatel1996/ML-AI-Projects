@@ -58,10 +58,10 @@ class Split():
         elif(val <= cat75): return 'h'
         else: return 'vh'
 
-    def __getQuartile_Category(self, dataFrame, colsList):
+    def __getQuartile_Category(self, dataFrame):
         desDF = dataFrame.describe()
         catColNames = []
-        for i in colsList:
+        for i in self.stratifyBy:
             catColNames.append("cat_"+i)
             dataFrame["cat_"+i] = dataFrame[i].apply(lambda x: self.__getCategory(desDF, i, x))
         return dataFrame, catColNames
@@ -71,20 +71,17 @@ class Split():
             train, test = tts(dataFrame, test_size=test_size, stratify=stratifyBy, random_state=50)
         else:
             train, test = tts(dataFrame, test_size=test_size, random_state=50)
-        X_train = (train[attrs]).to_numpy().reshape(-1,1)
         Y_train = (train[labels]).to_numpy().reshape(-1,1)
-        X_test = (test[attrs]).to_numpy().reshape(-1,1)
         Y_test = (test[labels]).to_numpy().reshape(-1,1)
-        return (train[attrs+labels], test[attrs+labels], X_train, X_test, Y_train, Y_test)
+        return (train[attrs], test[attrs], Y_train, Y_test)
     
     def perform(self, dataFrame):
-        labels = self.labels
-        attrs = dataFrame.drop(labels, axis=1).columns.values.tolist()
+        attrs = dataFrame.drop(self.labels, axis=1).columns.values.tolist()
         if(self.stratify):
-            dataFrame, catCols = self.__getQuartile_Category(dataFrame, self.stratifyBy)
-            return self.__get_tts_from_df(dataFrame, self.test_size, attrs, labels, dataFrame[catCols])
+            dataFrame, catCols = self.__getQuartile_Category(dataFrame)
+            return self.__get_tts_from_df(dataFrame, self.test_size, attrs, self.labels, dataFrame[catCols])
         else:
-            return self.__get_tts_from_df(dataFrame, self.test_size, attrs, labels)
+            return self.__get_tts_from_df(dataFrame, self.test_size, attrs, self.labels)
 
 class Enhance():
     def __init__(self, roomsPerHouse=True, bedroomsPerRoom=True):
@@ -142,7 +139,7 @@ class ScaleFeature():
     def perform(self, dataFrame):
         if(self.training):
             self.scaler.fit(dataFrame)   
-        dataFrame = pd.DataFrame(self.scaler.transform(dataFrame) , columns= dataFrame.columns.values.tolist())      
+        dataFrame = pd.DataFrame(self.scaler.transform(dataFrame), columns=dataFrame.columns.values.tolist())
         return dataFrame
 
 class PrePorcess():
@@ -172,7 +169,7 @@ birdsEyeView = BirdsEyeView(caliHousing)
 # Splitting Dataset into Training and Testing Subsets
 labels = ['median_house_value']
 split = Split(0.2, labels, True, ['median_income'] + labels)
-trainDF, testDF, X_train, X_test, Y_train, Y_test = split.perform(caliHousing)
+trainDF, testDF, Y_train, Y_test = split.perform(caliHousing)
 
 #Data Exploration
 explore = Explore(trainDF)
@@ -181,5 +178,6 @@ explore = Explore(trainDF)
 
 #PreProcessing Training Subset
 preProcess = PrePorcess()
-trainDF = preProcess.perform(trainDF)
-print(trainDF.head())
+X_train = preProcess.perform(trainDF)
+print(X_train.head())
+X_test = preProcess.perform(testDF)
