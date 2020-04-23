@@ -182,7 +182,7 @@ class FineTune():
         print("Best Model: " + str(search.best_estimator_))
         print("*****==========*****")
         print()
-        return (search.best_params_, search.best_estimator_)
+        return (search.best_params_, search.best_estimator_, search.best_estimator_.feature_importances_)
 
 class Test():
     def perform(self, model, attrSet, labelSet):
@@ -237,7 +237,7 @@ param_grid = [
         {'n_estimators': [3, 10, 30], 'max_features': [2, 4, 6, 8]},
         {'bootstrap': [False], 'n_estimators': [3, 10], 'max_features': [2, 3, 4]},
     ]
-bestParams, bestModel = fineTune.perform(forest_reg_model, param_grid, X_train, Y_train)
+bestParams, bestModel, featureImps = fineTune.perform(forest_reg_model, param_grid, X_train, Y_train)
 #bestModel is the Final Model to be used for Evaluation on Test Set.
 
 #PreProcessing Testing Subset
