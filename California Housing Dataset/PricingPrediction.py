@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import sklearn
+from sklearn import linear_model
+from sklearn import tree
 from sklearn.base import TransformerMixin
 from sklearn.base import BaseEstimator
 from sklearn.impute import SimpleImputer
@@ -11,6 +13,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split as tts
+from sklearn.model_selection import cross_val_score as cvs
 from pandas.plotting import scatter_matrix
 
 #Utility Classes
@@ -92,16 +95,13 @@ class Enhance():
         return dataFrame
 
 class CleanData():
-    def __init__(self, training=True):
-        self.training = training
-    
     def __getColLocs(self, dataFrame, colsList):
         return list(map(lambda x: dataFrame.columns.get_loc(x), colsList))
     
-    def perform(self, dataFrame):
+    def perform(self, dataFrame, training=True):
         colsList = dataFrame.describe().columns.values.tolist()
         remColsList = list(set(dataFrame.columns.values.tolist())-set(colsList))
-        if(self.training):
+        if(training):
             self.transformer = ColumnTransformer(transformers=[
                 ('imp_median', SimpleImputer(strategy='median'), self.__getColLocs(dataFrame, colsList))
             ],remainder='passthrough')
@@ -120,16 +120,13 @@ class ColumnLabelBinarizer(BaseEstimator, TransformerMixin):
         return self.encoder.transform(x)
      
 class CategoryConvert():
-    def __init__(self, training=True):
-        self.training = training
-    
     def __getColLocs(self, dataFrame, colsList):
         return list(map(lambda x: dataFrame.columns.get_loc(x), colsList))
     
-    def perform(self, dataFrame):
+    def perform(self, dataFrame, training=True):
         colsList = ['ocean_proximity']
         remColsList = list(set(dataFrame.columns.values.tolist())-set(colsList))
-        if(self.training):
+        if(training):
             self.transformer = ColumnTransformer(transformers=[
                 ('label_binarizer', ColumnLabelBinarizer(), self.__getColLocs(dataFrame, colsList))
             ],remainder='passthrough')
@@ -139,30 +136,31 @@ class CategoryConvert():
         return dataFrame    
 
 class ScaleFeature():
-    def __init__(self, training=True):
-        self.training = training
-           
-    def perform(self, dataFrame):
-        if(self.training):
+    def perform(self, dataFrame, training=True):
+        if(training):
             self.transformer = StandardScaler()
             self.transformer.fit(dataFrame)   
         npOutput = self.transformer.transform(dataFrame)
         return npOutput
 
 class PreProcess():
-    def __init__(self, training=True):
+    def __init__(self):
         self.enhance = Enhance()
-        self.cleanData = CleanData(training=training)
-        self.categoryConvert = CategoryConvert(training=training)
-        self.scaleFeature = ScaleFeature(training=training)
+        self.cleanData = CleanData()
+        self.categoryConvert = CategoryConvert()
+        self.scaleFeature = ScaleFeature()
 
-    def perform(self, dataFrame):
+    def perform(self, dataFrame, training=True):
         dataFrame = self.enhance.perform(dataFrame)
-        dataFrame = self.cleanData.perform(dataFrame)
-        dataFrame = self.categoryConvert.perform(dataFrame)
-        npOutput = self.scaleFeature.perform(dataFrame)
+        dataFrame = self.cleanData.perform(dataFrame, training)
+        dataFrame = self.categoryConvert.perform(dataFrame, training)
+        npOutput = self.scaleFeature.perform(dataFrame, training)
         return npOutput
-        
+
+    
+    
+    
+            
 caliHousing = pd.read_csv("californiaHousing-price.csv", sep=",")
 
 # Quick Look at the Structure of the Dataset
@@ -185,6 +183,20 @@ trainDF, testDF, Y_train, Y_test = split.perform(caliHousing)
 #PreProcessing Training Subset
 preProcess = PreProcess()
 X_train = preProcess.perform(trainDF)
-print(X_train)
 
-#X_test = preProcess.perform(testDF)
+#Training A Linear Regression Models
+lin_reg_model = linear_model.LinearRegression()
+lin_reg_model.fit(X_train, Y_train)
+trainSetPredictions = lin_reg_model.predict(X_train)
+
+#Training A Decision Tree Regression Models
+tree_reg_model = tree.DecisionTreeRegressor()
+tree_reg_model.fit(X_train, Y_train)
+trainSetPredictions = tree_reg_model.predict(X_train)
+
+#Cross-Validating the 2 models.
+scores = cvs(tree_reg_model, X_train, Y_train, scoring="neg_mean_squared_error", cv=10)
+rmse_scores = np.sqrt(-scores)
+
+
+#X_test = preProcess.perform(testDF,False)
