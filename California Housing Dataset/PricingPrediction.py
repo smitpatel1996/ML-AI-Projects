@@ -3,12 +3,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import sklearn
-from sklearn.model_selection import train_test_split as tts
+from sklearn.base import TransformerMixin
+from sklearn.base import BaseEstimator
+from sklearn.impute import SimpleImputer
 from sklearn.metrics import mean_squared_error as mse
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.preprocessing import StandardScaler
-from sklearn.impute import SimpleImputer
+from sklearn.model_selection import train_test_split as tts
 from pandas.plotting import scatter_matrix
 
 #Utility Classes
@@ -84,83 +86,87 @@ class Split():
             return self.__get_tts_from_df(dataFrame, self.test_size, attrs, self.labels)
 
 class Enhance():
-    def __init__(self, roomsPerHouse=True, bedroomsPerRoom=True):
-        self.roomsPerHouse = roomsPerHouse
-        self.bedroomsPerRoom = bedroomsPerRoom
-        
     def perform(self, dataFrame):
-        if(self.roomsPerHouse):
-            dataFrame['avgRooms_per_household'] = dataFrame['total_rooms']/dataFrame['households']
-        if(self.bedroomsPerRoom):
-            dataFrame['avgBedRooms_per_room'] = dataFrame['total_bedrooms']/dataFrame['total_rooms']
+        dataFrame['avgRooms_per_household'] = dataFrame['total_rooms']/dataFrame['households']
+        dataFrame['avgBedRooms_per_room'] = dataFrame['total_bedrooms']/dataFrame['total_rooms']
         return dataFrame
 
 class CleanData():
-    def __init__(self, strategy='mean', missing_values=np.nan, training=True):
-        self.imp = SimpleImputer(missing_values=missing_values, strategy=strategy)
-        self.strategy = strategy
+    def __init__(self, training=True):
         self.training = training
+    
+    def __getColLocs(self, dataFrame, colsList):
+        return list(map(lambda x: dataFrame.columns.get_loc(x), colsList))
     
     def perform(self, dataFrame):
-        if(self.strategy == 'median' or self.strategy == 'mean'):
-            numCols = dataFrame.describe().columns.values.tolist()
-            remCols = list(set(dataFrame.columns.values.tolist())-set(numCols))
-            remDf = dataFrame[remCols]
-            remDf.reset_index(drop=True, inplace=True)
-            dataFrame = dataFrame[numCols]
-            if(self.training):            
-                self.imp.fit(dataFrame)
-            filledNpArr = self.imp.transform(dataFrame)
-            dataFrame = pd.DataFrame(filledNpArr, columns=dataFrame.columns)
-            dataFrame = pd.concat([dataFrame, remDf], axis=1)
-        return dataFrame
-        
+        colsList = dataFrame.describe().columns.values.tolist()
+        remColsList = list(set(dataFrame.columns.values.tolist())-set(colsList))
+        if(self.training):
+            self.transformer = ColumnTransformer(transformers=[
+                ('imp_median', SimpleImputer(strategy='median'), self.__getColLocs(dataFrame, colsList))
+            ],remainder='passthrough')
+            self.transformer.fit(dataFrame)
+        transformedNpArr = self.transformer.transform(dataFrame)
+        dataFrame = pd.DataFrame(transformedNpArr, columns=colsList+remColsList)
+        return dataFrame 
+
+class ColumnLabelBinarizer(BaseEstimator, TransformerMixin):
+    def __init__(self):
+        self.encoder = LabelBinarizer()
+    def fit(self, x, y=None):
+        self.encoder.fit(x)
+        return self
+    def transform(self, x, y=None):
+        return self.encoder.transform(x)
+     
 class CategoryConvert():
-    def __init__(self, sparse=False, training=True):
-        self.encoder = LabelBinarizer(sparse_output=sparse)
+    def __init__(self, training=True):
         self.training = training
     
-    def perform(self, dataFrame, catAttrs):
-        remCols = dataFrame.drop(catAttrs, axis=1).columns.values.tolist()
-        remDf = dataFrame[remCols]
-        remDf.reset_index(drop=True, inplace=True)
-        dataFrame = dataFrame[catAttrs]
+    def __getColLocs(self, dataFrame, colsList):
+        return list(map(lambda x: dataFrame.columns.get_loc(x), colsList))
+    
+    def perform(self, dataFrame):
+        colsList = ['ocean_proximity']
+        remColsList = list(set(dataFrame.columns.values.tolist())-set(colsList))
         if(self.training):
-            self.encoder.fit(dataFrame)
-        dataFrame = pd.DataFrame(self.encoder.transform(dataFrame), columns= self.encoder.classes_)
-        dataFrame = pd.concat([remDf, dataFrame], axis=1)
+            self.transformer = ColumnTransformer(transformers=[
+                ('label_binarizer', ColumnLabelBinarizer(), self.__getColLocs(dataFrame, colsList)),
+            ],remainder='passthrough')
+            self.transformer.fit(dataFrame)
+        transformedNpArr = self.transformer.transform(dataFrame)
+        dataFrame = pd.DataFrame(transformedNpArr)
         return dataFrame    
 
 class ScaleFeature():
     def __init__(self, training=True):
-        self.scaler = StandardScaler()
         self.training = training
-    
+           
     def perform(self, dataFrame):
         if(self.training):
-            self.scaler.fit(dataFrame)   
-        dataFrame = pd.DataFrame(self.scaler.transform(dataFrame), columns=dataFrame.columns.values.tolist())
+            self.transformer = StandardScaler()
+            self.transformer.fit(dataFrame)   
+        dataFrame = self.transformer.transform(dataFrame)
         return dataFrame
 
 class PrePorcess():
     def __init__(self, training=True):
-        self.training = training
         self.enhance = Enhance()
-        self.cleanData = CleanData(strategy='median', training=training)
+        self.cleanData = CleanData(training=training)
         self.categoryConvert = CategoryConvert(training=training)
         self.scaleFeature = ScaleFeature(training=training)
 
     def perform(self, dataFrame):
         dataFrame = self.enhance.perform(dataFrame)
         dataFrame = self.cleanData.perform(dataFrame)
-        dataFrame = self.categoryConvert.perform(dataFrame, 'ocean_proximity')
+        dataFrame = self.categoryConvert.perform(dataFrame)
         dataFrame = self.scaleFeature.perform(dataFrame)
         return dataFrame
         
 caliHousing = pd.read_csv("californiaHousing-price.csv", sep=",")
 
 # Quick Look at the Structure of the Dataset
-birdsEyeView = BirdsEyeView(caliHousing)
+#birdsEyeView = BirdsEyeView(caliHousing)
 #print(birdsEyeView.getSample())
 #birdsEyeView.getInfo()
 #print(birdsEyeView.getNumAttrStats())
@@ -172,12 +178,13 @@ split = Split(0.2, labels, True, ['median_income'] + labels)
 trainDF, testDF, Y_train, Y_test = split.perform(caliHousing)
 
 #Data Exploration
-explore = Explore(trainDF)
-# for i in labels:
-#     print(explore.getCorrToLabels(i))
+#explore = Explore(trainDF)
+#for i in labels:
+#   print(explore.getCorrToLabels(i))
 
 #PreProcessing Training Subset
 preProcess = PrePorcess()
 X_train = preProcess.perform(trainDF)
-print(X_train.head())
-X_test = preProcess.perform(testDF)
+
+
+#X_test = preProcess.perform(testDF)
