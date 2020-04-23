@@ -131,7 +131,7 @@ class CategoryConvert():
         remColsList = list(set(dataFrame.columns.values.tolist())-set(colsList))
         if(self.training):
             self.transformer = ColumnTransformer(transformers=[
-                ('label_binarizer', ColumnLabelBinarizer(), self.__getColLocs(dataFrame, colsList)),
+                ('label_binarizer', ColumnLabelBinarizer(), self.__getColLocs(dataFrame, colsList))
             ],remainder='passthrough')
             self.transformer.fit(dataFrame)
         transformedNpArr = self.transformer.transform(dataFrame)
@@ -146,10 +146,10 @@ class ScaleFeature():
         if(self.training):
             self.transformer = StandardScaler()
             self.transformer.fit(dataFrame)   
-        dataFrame = self.transformer.transform(dataFrame)
-        return dataFrame
+        npOutput = self.transformer.transform(dataFrame)
+        return npOutput
 
-class PrePorcess():
+class PreProcess():
     def __init__(self, training=True):
         self.enhance = Enhance()
         self.cleanData = CleanData(training=training)
@@ -160,8 +160,8 @@ class PrePorcess():
         dataFrame = self.enhance.perform(dataFrame)
         dataFrame = self.cleanData.perform(dataFrame)
         dataFrame = self.categoryConvert.perform(dataFrame)
-        dataFrame = self.scaleFeature.perform(dataFrame)
-        return dataFrame
+        npOutput = self.scaleFeature.perform(dataFrame)
+        return npOutput
         
 caliHousing = pd.read_csv("californiaHousing-price.csv", sep=",")
 
@@ -183,8 +183,8 @@ trainDF, testDF, Y_train, Y_test = split.perform(caliHousing)
 #   print(explore.getCorrToLabels(i))
 
 #PreProcessing Training Subset
-preProcess = PrePorcess()
+preProcess = PreProcess()
 X_train = preProcess.perform(trainDF)
-
+print(X_train)
 
 #X_test = preProcess.perform(testDF)
