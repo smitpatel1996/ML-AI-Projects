@@ -5,6 +5,7 @@ import pandas as pd
 import sklearn
 from sklearn import linear_model
 from sklearn import tree
+from sklearn import ensemble
 from sklearn.base import TransformerMixin
 from sklearn.base import BaseEstimator
 from sklearn.impute import SimpleImputer
@@ -14,6 +15,8 @@ from sklearn.preprocessing import LabelBinarizer
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split as tts
 from sklearn.model_selection import cross_val_score as cvs
+from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import RandomizedSearchCV
 from pandas.plotting import scatter_matrix
 
 #Utility Classes
@@ -76,8 +79,8 @@ class Split():
             train, test = tts(dataFrame, test_size=test_size, stratify=stratifyBy, random_state=50)
         else:
             train, test = tts(dataFrame, test_size=test_size, random_state=50)
-        Y_train = (train[labels]).to_numpy().reshape(-1,1)
-        Y_test = (test[labels]).to_numpy().reshape(-1,1)
+        Y_train = (train[labels]).values.ravel()
+        Y_test = (test[labels]).values.ravel()
         return (train[attrs], test[attrs], Y_train, Y_test)
     
     def perform(self, dataFrame):
@@ -157,10 +160,42 @@ class PreProcess():
         npOutput = self.scaleFeature.perform(dataFrame, training)
         return npOutput
 
-    
-    
-    
-            
+class ValidateModels():
+    def perform(self, model, attrSet, labelSet):
+        scores = cvs(model, attrSet, labelSet, scoring="neg_mean_squared_error", cv=10)
+        scores = np.sqrt(-scores)
+        print("Cost Function Estimate: MEAN +/- STD = " + str(np.round(scores.mean(),3)) + " +/- " + str(np.round(scores.std(),3)))
+
+class FineTune():
+    def __init__(self, type='randomized'):
+        self.type = type
+        
+    def perform(self, model, param_grid, attrSet, labelSet):
+        if(self.type == 'grid'):
+            search = GridSearchCV(model, param_grid, cv=5, scoring='neg_mean_squared_error')
+        elif(self.type == 'randomized'):
+            n_iter_search = 20
+            search = RandomizedSearchCV(model, param_grid, n_iter_search, cv=5, scoring='neg_mean_squared_error')
+        search.fit(attrSet, labelSet)
+        print()
+        print("*****==========*****")
+        print("Best Model: " + str(search.best_estimator_))
+        print("*****==========*****")
+        print()
+        return (search.best_params_, search.best_estimator_)
+
+class Test():
+    def perform(self, model, attrSet, labelSet):
+        predictions = model.predict(attrSet)
+        rmse = np.sqrt(mse(labelSet, predictions))
+        print()
+        print("*****==========*****")
+        print("RMSE for the Best Model on Test Set: " + str(rmse))
+        print("*****==========*****")
+        print()
+        return predictions
+
+### ==== ACTUAL IMPLEMENTATION ==== ###            
 caliHousing = pd.read_csv("californiaHousing-price.csv", sep=",")
 
 # Quick Look at the Structure of the Dataset
@@ -184,19 +219,30 @@ trainDF, testDF, Y_train, Y_test = split.perform(caliHousing)
 preProcess = PreProcess()
 X_train = preProcess.perform(trainDF)
 
-#Training A Linear Regression Models
+#Initializing Models
 lin_reg_model = linear_model.LinearRegression()
-lin_reg_model.fit(X_train, Y_train)
-trainSetPredictions = lin_reg_model.predict(X_train)
-
-#Training A Decision Tree Regression Models
 tree_reg_model = tree.DecisionTreeRegressor()
-tree_reg_model.fit(X_train, Y_train)
-trainSetPredictions = tree_reg_model.predict(X_train)
+forest_reg_model = ensemble.RandomForestRegressor()
 
-#Cross-Validating the 2 models.
-scores = cvs(tree_reg_model, X_train, Y_train, scoring="neg_mean_squared_error", cv=10)
-rmse_scores = np.sqrt(-scores)
+#Cross-Validating the Models.
+# validateModels = ValidateModels()
+# validateModels.perform(lin_reg_model, X_train, Y_train) 
+# validateModels.perform(tree_reg_model, X_train, Y_train)
+# validateModels.perform(forest_reg_model, X_train, Y_train.ravel())
+#forest_reg_model Results are Best.
 
+#Fine Tuninng the Best Model.
+fineTune = FineTune('grid')
+param_grid = [
+        {'n_estimators': [3, 10, 30], 'max_features': [2, 4, 6, 8]},
+        {'bootstrap': [False], 'n_estimators': [3, 10], 'max_features': [2, 3, 4]},
+    ]
+bestParams, bestModel = fineTune.perform(forest_reg_model, param_grid, X_train, Y_train)
+#bestModel is the Final Model to be used for Evaluation on Test Set.
 
-#X_test = preProcess.perform(testDF,False)
+#PreProcessing Testing Subset
+X_test = preProcess.perform(testDF, False)
+
+#Predicting Labels for Testing Subset
+test = Test()
+predictions = test.perform(bestModel, X_test, Y_test)
