@@ -184,13 +184,25 @@ class FineTune():
         print()
         return (search.best_params_, search.best_estimator_, search.best_estimator_.feature_importances_)
 
+class ExtractImpFeats():
+    def __init__(self, featureImps, numOfFeats):
+        self.featureImps = featureImps
+        self.numOfFeats = numOfFeats
+        
+    def perform(self,  bestModel, trainAttrs, trainLabels, testAttrs, testLabels):
+        indices = np.sort(np.argpartition(np.array(self.featureImps), -self.numOfFeats)[-self.numOfFeats:])
+        trainAttrs = trainAttrs[: , indices]
+        testAttrs = testAttrs[: , indices]
+        bestModel.fit(trainAttrs, trainLabels)
+        return bestModel, testAttrs
+
 class Test():
     def perform(self, model, attrSet, labelSet):
         predictions = model.predict(attrSet)
         rmse = np.sqrt(mse(labelSet, predictions))
         print()
         print("*****==========*****")
-        print("RMSE for the Best Model on Test Set: " + str(rmse))
+        print("RMSE for the Best Model on Test Set: " + str(np.round(rmse,3)))
         print("*****==========*****")
         print()
         return predictions
@@ -215,9 +227,10 @@ trainDF, testDF, Y_train, Y_test = split.perform(caliHousing)
 #for i in labels:
 #   print(explore.getCorrToLabels(i))
 
-#PreProcessing Training Subset
+#PreProcessing the Subsets
 preProcess = PreProcess()
 X_train = preProcess.perform(trainDF)
+X_test = preProcess.perform(testDF, False)
 
 #Initializing Models
 lin_reg_model = linear_model.LinearRegression()
@@ -240,8 +253,9 @@ param_grid = [
 bestParams, bestModel, featureImps = fineTune.perform(forest_reg_model, param_grid, X_train, Y_train)
 #bestModel is the Final Model to be used for Evaluation on Test Set.
 
-#PreProcessing Testing Subset
-X_test = preProcess.perform(testDF, False)
+#Extracting Important Features for bestModel
+extractImpFeats = ExtractImpFeats(featureImps, 8)
+bestModel, X_test = extractImpFeats.perform(bestModel, X_train, Y_train, X_test, Y_test)
 
 #Predicting Labels for Testing Subset
 test = Test()
