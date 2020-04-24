@@ -1,4 +1,3 @@
-# ML models implemented here uses only one parameter 'alcohol' from the dataset to predict the 'quality' of Wine.
 # Training Subset = 80% and Testing Subset = 20%
 
 import matplotlib
@@ -20,13 +19,10 @@ def get_tts_from_df(dataFrame, test_size, attrs, labels):
     Y_test = (test[labels]).to_numpy()
     return (X_train, X_test, Y_train, Y_test)
     
-whiteWine = pd.read_csv("whitewine-quality.csv", sep=",", usecols=['alcohol', 'quality'])
+whiteWine = pd.read_csv("whitewine-quality.csv", sep=",")
 labels = ['quality']
 attrs = whiteWine.drop(labels, axis=1).columns.values.tolist()
 X_train, X_test, Y_train, Y_test = get_tts_from_df(whiteWine, 0.2, attrs, labels)
-
-# whiteWine.plot(kind='scatter', x='alcohol', y='quality', color='red')
-# plt.show()
 
 #Linear Regression
 lin_reg_model = linear_model.LinearRegression()
