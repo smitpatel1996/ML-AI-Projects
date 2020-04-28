@@ -152,3 +152,5 @@ plt.show()
 #Adjusting the PvR tradeoff as per the problem statement using PRvT plot.
 prAnalysis = PRAnalysis()
 prAnalysis.perform(Y_train_5, rf_scores, 'PvR')
+
+#Train the Best Model on whole trainingSet and evaluate on testingSet
