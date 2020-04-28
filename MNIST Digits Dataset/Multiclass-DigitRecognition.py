@@ -170,4 +170,4 @@ extractMetrics.perform(Y_train, rf_preds)
 #Curves Analysis
 analyzeCurves = AnalyzeCurves(3)
 #analyzeCurves.perform(sgd_clf_model, X_train, Y_train)
-analyzeCurves.perform(rf_clf_model, X_train, Y_train, 'ROC', 'predict_proba')
+analyzeCurves.perform(rf_clf_model, X_train, Y_train, 'PvR', 'predict_proba')
