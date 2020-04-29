@@ -1,0 +1,245 @@
+# MNIST -- Digit Recognition -- Dataset Used to Present the Classification Template.
+
+import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import sklearn
+from sklearn import neighbors
+from sklearn import ensemble
+from sklearn import multiclass
+from sklearn import metrics
+from scipy.ndimage.interpolation import shift
+from sklearn.metrics import roc_curve as ROC_curve
+from sklearn.metrics import precision_recall_curve as PR_curve
+from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import label_binarize
+from sklearn.model_selection import cross_val_score as cvs
+from sklearn.model_selection import cross_val_predict as cvp
+from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import RandomizedSearchCV
+
+class Shuffle(): #Used the Shuffle the Indexes of the Dataset in order to prevent skewed splits.
+    def perform(self, dataFrame):
+        return dataFrame.reindex(np.random.permutation(dataFrame.index))
+
+class Plot(): # USECASE SPECIFIC IMPLEMENTATION -- Not necessary for general calssification problems.
+    def perform(self, dataFrame, rowIndex=0):
+        row = (dataFrame.iloc[rowIndex,:]).to_numpy()
+        plt.imshow(row.reshape(28, 28), cmap = matplotlib.cm.binary, interpolation="nearest")
+        plt.axis("off")
+        plt.show()
+
+class Enhance(): #PreProcessing Step-1: The dataset is enhanced (manipulated) here so that it can provide more & useful information, based on usecase.
+    def __shift_image(self, image, dx, dy):
+        image = image.reshape((28, 28))
+        shifted_image = shift(image, [dy, dx], cval=0, mode="constant")
+        return shifted_image.reshape([-1])
+
+    def perform(self, X_train, Y_train):
+        # USECASE SPECIFIC IMPLEMENTATION
+        cols = X_train.columns.values.tolist()
+        X_train = X_train.to_numpy()
+        Y_train = Y_train.to_numpy()
+        X_train_augmented = [image for image in X_train]
+        Y_train_augmented = [label for label in Y_train]
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            for image, label in zip(X_train, Y_train):
+                X_train_augmented.append(self.__shift_image(image, dx, dy))
+                Y_train_augmented.append(label)
+        X_train_augmented = np.array(X_train_augmented)
+        Y_train_augmented = np.array(Y_train_augmented)
+        shuffle_idx = np.random.permutation(len(X_train_augmented))
+        X_train = X_train_augmented[shuffle_idx]
+        Y_train = Y_train_augmented[shuffle_idx]
+        X_train = pd.DataFrame(X_train, columns=cols)
+        Y_train = pd.Series(Y_train)
+        # Can tranform dataframe as needed to increase the information it provides.
+        return X_train, Y_train
+
+class ScaleFeature(): #PreProcessing Step-4: All the values in the dataset are scaled for better performance using algorithms, based on usecase.
+    def perform(self, dataFrame, training=True):
+        if(training):
+            self.transformer = StandardScaler()
+            self.transformer.fit(dataFrame)   
+        npOutput = self.transformer.transform(dataFrame)
+        return npOutput
+
+class PreProcess(): #PreProcessing PipeLine : Combines all the Pre-Processing Steps.
+    def __init__(self):
+        self.scaleFeature = ScaleFeature()
+
+    def perform(self, dataFrame, training=True):
+        # USECASE SPECIFIC IMPLEMENTATION
+        npOutput = self.scaleFeature.perform(dataFrame, training)
+        # In this implementation, the Enhancement Step has been performed from outside the pipeline. Such Customizations are possible.
+        return npOutput
+
+class ValidateModels(): #Validate Different ML Models to shortlist the best one, the scoring metric can be altered, bassed on usecase.
+    def __init__(self, split):
+        self.split = split
+        
+    def perform(self, model, attrSet, labelSet, classDist):
+        if(classDist == 'uniform'):
+            scores = cvs(model, attrSet, labelSet, scoring="accuracy", cv=self.split)
+            print("Accuracy Estimate: MEAN +/- STD = " + str(np.round(scores.mean(),3)) + " +/- " + str(np.round(scores.std(),3)))
+        elif(classDist == 'skewed'):
+            preds = cvp(model, attrSet, labelSet, cv=self.split)
+            print("Confusion Matrix: ")
+            print(metrics.confusion_matrix(labelSet, preds))
+            print("Classification report: ")
+            print(metrics.classification_report(labelSet, preds))
+
+class AnalyzeCurves(): #Used to further concretize the superiority of shorltisted ML model's performance over others.
+    def __init__(self, split):
+        self.split = split
+    
+    def __PRvT(self, labelSet, scores, classes):
+        for i in classes:
+            precisions, recalls, thresholds = PR_curve(labelSet[:, i], scores[:, i])
+            plt.plot(thresholds, precisions[:-1], label="Precision: {}".format(i))
+            plt.plot(thresholds, recalls[:-1], label="Recall: {}".format(i))
+        plt.xlabel("Threshold")
+        plt.ylim([0, 1])
+        plt.legend(loc="best")
+        plt.title("Precision & Recall vs Threshold")
+        plt.grid(b=True, which='major', color='#666666', linestyle='--')
+        plt.show()
+        
+    def __PvR(self, labelSet, scores, classes):
+        aucSum = 0
+        for i in classes:
+            precisions, recalls, thresholds = PR_curve(labelSet[:, i], scores[:, i])
+            plt.plot(recalls, precisions, label="Class: {}".format(i))
+            aucSum = aucSum + metrics.auc(recalls, precisions)
+        print("Average AUC for Precision Vs Recall: " + str(aucSum/len(classes)))
+        plt.xlabel("Recall")
+        plt.ylabel("Precision")
+        plt.axis([0, 1, 0, 1])
+        plt.legend(loc="best")
+        plt.title("Precision vs Recall")
+        plt.grid(b=True, which='major', color='#666666', linestyle='--')
+        plt.show()
+    
+    def __ROC(self, labelSet, scores, classes):
+        aucSum = 0
+        for i in classes:
+            fpr, tpr, thresholds = ROC_curve(labelSet[:, i], scores[:, i])
+            plt.plot(fpr, tpr, label="Class: {}".format(i))
+            aucSum = aucSum + metrics.auc(fpr, tpr)
+        print("Average AUC for ROC: " + str(aucSum/len(classes)))
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.plot([0, 1], [0, 1], 'k--')
+        plt.axis([0, 1, 0, 1])
+        plt.legend(loc="best")
+        plt.title("ROC Curve")
+        plt.grid(b=True, which='major', color='#666666', linestyle='--')
+        plt.show()
+    
+    def perform(self, model, attrSet, labelSet, curve='PvR', method='decision_function'):
+        classes = list(set(labelSet))
+        n_classes = len(classes)
+        labelSet = label_binarize(labelSet, classes=[*range(n_classes)])
+        clf = multiclass.OneVsRestClassifier(model)
+        scores = cvp(clf, attrSet, labelSet, cv=self.split, method=method)
+        if(curve == 'PvR'):
+            self.__PvR(labelSet, scores, classes)
+        elif(curve == 'PRvT'):
+            self.__PvR(labelSet, scores, classes)
+        elif(curve == 'ROC'):
+            self.__ROC(labelSet, scores, classes)
+
+class FineTune(): #Find the best hyperparamters for the shortliested ML Model, the scoring metric can be altered, bassed on usecase.
+    def __init__(self, type='randomized'):
+        self.type = type
+        
+    def perform(self, model, param_grid, attrSet, labelSet):
+        # multiMetricScorer defined like this:
+        # scorer = {"f1_weighted": metrics.make_scorer(metrics.f1_score, average = 'weighted'),
+        #           "precision_weighted": metrics.make_scorer(metrics.precision_score, average = 'weighted')}
+        # use this scorer in the scoring parameter to perform a multi-metric search along with refit=<key from scorer>
+        if(self.type == 'grid'):
+            search = GridSearchCV(model, param_grid, cv=3, scoring="f1_weighted")
+        elif(self.type == 'randomized'):
+            n_iter_search = 20
+            search = RandomizedSearchCV(model, param_grid, n_iter_search, cv=5, scoring='f1_weighted')
+        search.fit(attrSet, labelSet)
+        print()
+        print("*****==========*****")
+        print("Best Model: " + str(search.best_estimator_))
+        print("*****==========*****")
+        print()
+        return (search.best_params_, search.best_estimator_, search.best_estimator_.feature_importances_)
+
+class Test(): #Test the final model on the Testing Subset and evaluate performance.
+    def perform(self, model, attrSet, labelSet):
+        predictions = model.predict(attrSet)
+        print()
+        print("*****==========*****")
+        print("Accuracy Score: " + str(metrics.accuracy_score(labelSet, predictions)))
+        print("*****==========*****")
+        print("Confusion Matrix: ")
+        print(metrics.confusion_matrix(labelSet, predictions))
+        print("*****==========*****")
+        print("Classification report: ")
+        print(metrics.classification_report(labelSet, predictions))
+        print("*****==========*****")
+        print()
+        return predictions
+
+### ==== ACTUAL IMPLEMENTATION ==== ###
+mnist_train = pd.read_csv("mnist_train.csv", sep=",", names=range(1,786))
+mnist_test = pd.read_csv("mnist_test.csv", sep=",", names=range(1,786))
+
+# Random Shuffling of the data
+shuffle = Shuffle()
+mnist_train = shuffle.perform(mnist_train)
+mnist_test = shuffle.perform(mnist_test)
+
+# Splitting Dataset into Training and Testing Subsets
+trainDF = mnist_train.iloc[:,1:]
+testDF = mnist_test.iloc[:,1:]
+Y_train = mnist_train.iloc[:,0]
+Y_test = mnist_test.iloc[:,0]
+
+enhance = Enhance()
+trainDF, Y_train = enhance.perform(trainDF, Y_train)
+
+# Data Exploration
+# plot = Plot()
+# plot.perform(X_train)
+# print(Y_train.iloc[0])
+
+#PreProcessing the Subsets
+preProcess = PreProcess()
+X_train = preProcess.perform(trainDF)
+X_test = preProcess.perform(testDF, False)
+Y_train = Y_train.to_numpy()
+Y_test = Y_test.to_numpy()
+
+#Initializing Models
+knn_clf_model = neighbors.KNeighborsClassifier()
+rf_clf_model = ensemble.RandomForestClassifier(random_state=50, n_jobs=-1, n_estimators=200)
+
+#Cross-Validating the Models.
+validateModels = ValidateModels(3)
+validateModels.perform(knn_clf_model, X_train, Y_train, 'skewed')
+validateModels.perform(rf_clf_model, X_train, Y_train, 'skewed')
+#Curves Analysis
+analyzeCurves = AnalyzeCurves(3)
+analyzeCurves.perform(knn_clf_model, X_train, Y_train, 'PvR', 'predict_proba')
+analyzeCurves.perform(rf_clf_model, X_train, Y_train, 'PvR', 'predict_proba')
+# rf_clf_model Results are Best.
+
+#Fine Tuninng the Best Model.
+fineTune = FineTune('grid')
+param_grid = [
+        {'n_estimators': [100, 200]}
+    ]
+bestParams, bestModel, featureImps = fineTune.perform(rf_clf_model, param_grid, X_train, Y_train)
+#bestModel is the Final Model to be used for Evaluation on Test Set.
+
+#Predicting Labels for Testing Subset
+test = Test()
+predictions = test.perform(rf_clf_model, X_test, Y_test)
