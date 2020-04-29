@@ -38,6 +38,9 @@ class Enhance():
         return shifted_image.reshape([-1])
 
     def perform(self, X_train, Y_train):
+        cols = X_train.columns.values.tolist()
+        X_train = X_train.to_numpy()
+        Y_train = Y_train.to_numpy()
         X_train_augmented = [image for image in X_train]
         Y_train_augmented = [label for label in Y_train]
         for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
@@ -49,6 +52,8 @@ class Enhance():
         shuffle_idx = np.random.permutation(len(X_train_augmented))
         X_train = X_train_augmented[shuffle_idx]
         Y_train = Y_train_augmented[shuffle_idx]
+        X_train = pd.DataFrame(X_train, columns=cols)
+        Y_train = pd.Series(Y_train)
         return X_train, Y_train
 
 class ScaleFeature():
@@ -195,10 +200,8 @@ testDF = mnist_test.iloc[:,1:]
 Y_train = mnist_train.iloc[:,0]
 Y_test = mnist_test.iloc[:,0]
 
-# enhance = Enhance()
-# X_train, Y_train = enhance.perform(trainDF.to_numpy(), Y_train.to_numpy())
-# print(X_train.shape)
-# print(Y_train.shape)
+enhance = Enhance()
+trainDF, Y_train = enhance.perform(trainDF, Y_train)
 
 # Data Exploration
 # plot = Plot()
