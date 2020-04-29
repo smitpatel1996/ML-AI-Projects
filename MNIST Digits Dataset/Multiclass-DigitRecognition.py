@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import sklearn
-from sklearn import linear_model
+from sklearn import neighbors
 from sklearn import ensemble
 from sklearn import multiclass
 from sklearn import metrics
@@ -144,8 +144,10 @@ class FineTune():
 class Test():
     def perform(self, model, attrSet, labelSet):
         predictions = model.predict(attrSet)
-        print(metrics.accuracy_score(labelSet, predictions))
+        print("Accuracy Score: " + str(metrics.accuracy_score(labelSet, predictions)))
+        print("Classification report: ")
         print(metrics.classification_report(labelSet, predictions))
+        print("Confusion Matrix: ")
         print(metrics.confusion_matrix(labelSet, predictions))
         return predictions
     
@@ -177,17 +179,17 @@ Y_train = Y_train.to_numpy()
 Y_test = Y_test.to_numpy()
 
 #Initializing Models
-sgd_clf_model = linear_model.SGDClassifier(random_state=50, max_iter=10)
-rf_clf_model = ensemble.RandomForestClassifier(random_state=50, n_estimators=100)
+#knn_clf_model = neighbors.KNeighborsClassifier()
+rf_clf_model = ensemble.RandomForestClassifier(random_state=50, n_jobs=-1)
 
 #Cross-Validating the Models.
 validateModels = ValidateModels(3)
-validateModels.perform(sgd_clf_model, X_train, Y_train, 'skewed')
-validateModels.perform(rf_clf_model, X_train, Y_train, 'skewed')
+#validateModels.perform(knn_clf_model, X_train, Y_train, 'skewed')
+#validateModels.perform(rf_clf_model, X_train, Y_train, 'skewed')
 #Curves Analysis
 analyzeCurves = AnalyzeCurves(3)
-analyzeCurves.perform(sgd_clf_model, X_train, Y_train, 'PvR', 'predict_proba')
-analyzeCurves.perform(rf_clf_model, X_train, Y_train, 'PvR', 'predict_proba')
+#analyzeCurves.perform(knn_clf_model, X_train, Y_train, 'PvR', 'predict_proba')
+#analyzeCurves.perform(rf_clf_model, X_train, Y_train, 'PvR', 'predict_proba')
 # rf_clf_model Results are Best.
 
 #Fine Tuninng the Best Model.
@@ -196,8 +198,6 @@ param_grid = [
         {'n_estimators': [100, 200]}
     ]
 bestParams, bestModel, bestScore = fineTune.perform(rf_clf_model, param_grid, X_train, Y_train)
-print(bestParams)
-print(bestScore)
 #bestModel is the Final Model to be used for Evaluation on Test Set.
 
 #Predicting Labels for Testing Subset
