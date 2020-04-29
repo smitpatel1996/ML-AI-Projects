@@ -1,4 +1,5 @@
 # MNIST -- Digit Recognition -- Dataset Used to Present the Classification Template.
+# Reg-Temp-UseCase.py may provide further template classes and snippets
 
 import matplotlib
 import matplotlib.pyplot as plt

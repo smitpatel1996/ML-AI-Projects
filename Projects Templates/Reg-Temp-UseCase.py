@@ -1,4 +1,5 @@
 # California Housing -- Pricing Prediction -- Dataset Used to Present the Regression Template
+# Class-Temp-UseCase.py may provide further template classes and snippets 
 
 import matplotlib
 import matplotlib.pyplot as plt
