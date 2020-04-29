@@ -46,25 +46,33 @@ class ValidateModels():
     def __init__(self, split):
         self.split = split
         
-    def perform(self, model, attrSet, labelSet, returnType='scores'):
-        if(returnType == 'scores'):
+    def perform(self, model, attrSet, labelSet, classDist):
+        if(classDist == 'uniform'):
             scores = cvs(model, attrSet, labelSet, scoring="accuracy", cv=self.split)
             print("Accuracy Estimate: MEAN +/- STD = " + str(np.round(scores.mean(),3)) + " +/- " + str(np.round(scores.std(),3)))
-        elif(returnType == 'predictions'):
+        elif(classDist == 'skewed'):
             preds = cvp(model, attrSet, labelSet, cv=self.split)
-            return preds
-
-class ExtractMetrics():
-    def perform(self, labels, preds):
-        print("Confusion Matrix: ")
-        print(metrics.confusion_matrix(labels, preds))
-        print("Classification report: ")
-        print(metrics.classification_report(labels, preds))
+            print("Confusion Matrix: ")
+            print(metrics.confusion_matrix(labelSet, preds))
+            print("Classification report: ")
+            print(metrics.classification_report(labelSet, preds))
 
 class AnalyzeCurves():
     def __init__(self, split):
         self.split = split
     
+    def __PRvT(self, labelSet, scores, classes):
+        for i in classes:
+            precisions, recalls, thresholds = PR_curve(labelSet[:, i], scores[:, i])
+            plt.plot(thresholds, precisions[:-1], label="Precision: {}".format(i))
+            plt.plot(thresholds, recalls[:-1], label="Recall: {}".format(i))
+        plt.xlabel("Threshold")
+        plt.ylim([0, 1])
+        plt.legend(loc="best")
+        plt.title("Precision & Recall vs Threshold")
+        plt.grid(b=True, which='major', color='#666666', linestyle='--')
+        plt.show()
+        
     def __PvR(self, labelSet, scores, classes):
         aucSum = 0
         for i in classes:
@@ -104,29 +112,10 @@ class AnalyzeCurves():
         scores = cvp(clf, attrSet, labelSet, cv=self.split, method=method)
         if(curve == 'PvR'):
             self.__PvR(labelSet, scores, classes)
+        elif(curve == 'PRvT'):
+            self.__PvR(labelSet, scores, classes)
         elif(curve == 'ROC'):
             self.__ROC(labelSet, scores, classes)
-          
-class PRAnalysis():
-    def __init__(self, split):
-        self.split = split
-        
-    def perform(self, model, attrSet, labelSet, method='decision_function'):
-        classes = list(set(labelSet))
-        n_classes = len(classes)
-        labelSet = label_binarize(labelSet, classes=[*range(n_classes)])
-        clf = multiclass.OneVsRestClassifier(model)
-        scores = cvp(clf, attrSet, labelSet, cv=self.split, method=method)
-        for i in classes:
-            precisions, recalls, thresholds = PR_curve(labelSet[:, i], scores[:, i])
-            plt.plot(thresholds, precisions[:-1], label="Precision: {}".format(i))
-            plt.plot(thresholds, recalls[:-1], label="Recall: {}".format(i))
-        plt.xlabel("Threshold")
-        plt.ylim([0, 1])
-        plt.legend(loc="best")
-        plt.title("Precision & Recall vs Threshold")
-        plt.grid(b=True, which='major', color='#666666', linestyle='--')
-        plt.show()
 
 ### ==== ACTUAL IMPLEMENTATION ==== ###
 mnist_train = pd.read_csv("mnist_train.csv", sep=",", names=range(1,786))
@@ -161,11 +150,8 @@ rf_clf_model = ensemble.RandomForestClassifier(random_state=50, n_estimators=10)
 
 #Cross-Validating the Models.
 validateModels = ValidateModels(3)
-#sgd_preds = validateModels.perform(sgd_clf_model, X_train, Y_train, 'predictions')
-rf_preds = validateModels.perform(rf_clf_model, X_train, Y_train, 'predictions')
-extractMetrics = ExtractMetrics()
-#extractMetrics.perform(Y_train, sgd_preds)
-extractMetrics.perform(Y_train, rf_preds)
+#validateModels.perform(sgd_clf_model, X_train, Y_train, 'skewed')
+validateModels.perform(rf_clf_model, X_train, Y_train, 'skewed')
 
 #Curves Analysis
 analyzeCurves = AnalyzeCurves(3)
