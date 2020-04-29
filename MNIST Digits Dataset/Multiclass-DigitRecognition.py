@@ -144,11 +144,17 @@ class FineTune():
 class Test():
     def perform(self, model, attrSet, labelSet):
         predictions = model.predict(attrSet)
+        print()
+        print("*****==========*****")
         print("Accuracy Score: " + str(metrics.accuracy_score(labelSet, predictions)))
-        print("Classification report: ")
-        print(metrics.classification_report(labelSet, predictions))
+        print("*****==========*****")
         print("Confusion Matrix: ")
         print(metrics.confusion_matrix(labelSet, predictions))
+        print("*****==========*****")
+        print("Classification report: ")
+        print(metrics.classification_report(labelSet, predictions))
+        print("*****==========*****")
+        print()
         return predictions
     
 ### ==== ACTUAL IMPLEMENTATION ==== ###
@@ -180,8 +186,8 @@ Y_test = Y_test.to_numpy()
 
 #Initializing Models
 #knn_clf_model = neighbors.KNeighborsClassifier()
-rf_clf_model = ensemble.RandomForestClassifier(random_state=50, n_jobs=-1)
-
+rf_clf_model = ensemble.RandomForestClassifier(random_state=50, n_jobs=-1, n_estimators=200)
+rf_clf_model.fit(X_train, Y_train)
 #Cross-Validating the Models.
 validateModels = ValidateModels(3)
 #validateModels.perform(knn_clf_model, X_train, Y_train, 'skewed')
@@ -194,12 +200,12 @@ analyzeCurves = AnalyzeCurves(3)
 
 #Fine Tuninng the Best Model.
 fineTune = FineTune('grid')
-param_grid = [
-        {'n_estimators': [100, 200]}
-    ]
-bestParams, bestModel, bestScore = fineTune.perform(rf_clf_model, param_grid, X_train, Y_train)
+# param_grid = [
+#         {'n_estimators': [100, 200]}
+#     ]
+# bestParams, bestModel, bestScore = fineTune.perform(rf_clf_model, param_grid, X_train, Y_train)
 #bestModel is the Final Model to be used for Evaluation on Test Set.
 
 #Predicting Labels for Testing Subset
 test = Test()
-predictions = test.perform(bestModel, X_test, Y_test)
+predictions = test.perform(rf_clf_model, X_test, Y_test)
