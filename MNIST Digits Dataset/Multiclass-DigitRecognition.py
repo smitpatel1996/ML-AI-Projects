@@ -7,6 +7,7 @@ from sklearn import neighbors
 from sklearn import ensemble
 from sklearn import multiclass
 from sklearn import metrics
+from scipy.ndimage.interpolation import shift
 from sklearn.metrics import roc_curve as ROC_curve
 from sklearn.metrics import precision_recall_curve as PR_curve
 from sklearn.preprocessing import StandardScaler
@@ -27,6 +28,28 @@ class Plot():
         plt.imshow(row.reshape(28, 28), cmap = matplotlib.cm.binary, interpolation="nearest")
         plt.axis("off")
         plt.show()
+
+class Enhance():
+    # Data Augmentation -- artificially growing the training set for better performance.
+    # For each image in the training set, four shifted copies were created and added the training set with same label as original.
+    def __shift_image(self, image, dx, dy):
+        image = image.reshape((28, 28))
+        shifted_image = shift(image, [dy, dx], cval=0, mode="constant")
+        return shifted_image.reshape([-1])
+
+    def perform(self, X_train, Y_train):
+        X_train_augmented = [image for image in X_train]
+        Y_train_augmented = [label for label in Y_train]
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            for image, label in zip(X_train, Y_train):
+                X_train_augmented.append(self.__shift_image(image, dx, dy))
+                Y_train_augmented.append(label)
+        X_train_augmented = np.array(X_train_augmented)
+        Y_train_augmented = np.array(Y_train_augmented)
+        shuffle_idx = np.random.permutation(len(X_train_augmented))
+        X_train = X_train_augmented[shuffle_idx]
+        Y_train = Y_train_augmented[shuffle_idx]
+        return X_train, Y_train
 
 class ScaleFeature():
     def perform(self, dataFrame, training=True):
@@ -171,6 +194,11 @@ trainDF = mnist_train.iloc[:,1:]
 testDF = mnist_test.iloc[:,1:]
 Y_train = mnist_train.iloc[:,0]
 Y_test = mnist_test.iloc[:,0]
+
+# enhance = Enhance()
+# X_train, Y_train = enhance.perform(trainDF.to_numpy(), Y_train.to_numpy())
+# print(X_train.shape)
+# print(Y_train.shape)
 
 # Data Exploration
 # plot = Plot()
