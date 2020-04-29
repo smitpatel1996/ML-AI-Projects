@@ -13,6 +13,8 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import label_binarize
 from sklearn.model_selection import cross_val_score as cvs
 from sklearn.model_selection import cross_val_predict as cvp
+from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import RandomizedSearchCV
 
 class Shuffle():
     def perform(self, dataFrame):
@@ -117,6 +119,36 @@ class AnalyzeCurves():
         elif(curve == 'ROC'):
             self.__ROC(labelSet, scores, classes)
 
+class FineTune():
+    def __init__(self, type='randomized'):
+        self.type = type
+        
+    def perform(self, model, param_grid, attrSet, labelSet):
+        # multiMetricScorer defined like this:
+        # scorer = {"f1_weighted": metrics.make_scorer(metrics.f1_score, average = 'weighted'),
+        #           "precision_weighted": metrics.make_scorer(metrics.precision_score, average = 'weighted')}
+        # use this scorer in the scoring parameter to perform a multi-metric search along with refit=<key from scorer>
+        if(self.type == 'grid'):
+            search = GridSearchCV(model, param_grid, cv=3, scoring="f1_weighted")
+        elif(self.type == 'randomized'):
+            n_iter_search = 20
+            search = RandomizedSearchCV(model, param_grid, n_iter_search, cv=5, scoring='neg_mean_squared_error')
+        search.fit(attrSet, labelSet)
+        print()
+        print("*****==========*****")
+        print("Best Model: " + str(search.best_estimator_))
+        print("*****==========*****")
+        print()
+        return (search.best_params_, search.best_estimator_, search.best_score_)
+
+class Test():
+    def perform(self, model, attrSet, labelSet):
+        predictions = model.predict(attrSet)
+        print(metrics.accuracy_score(labelSet, predictions))
+        print(metrics.classification_report(labelSet, predictions))
+        print(metrics.confusion_matrix(labelSet, predictions))
+        return predictions
+    
 ### ==== ACTUAL IMPLEMENTATION ==== ###
 mnist_train = pd.read_csv("mnist_train.csv", sep=",", names=range(1,786))
 mnist_test = pd.read_csv("mnist_test.csv", sep=",", names=range(1,786))
@@ -145,15 +177,29 @@ Y_train = Y_train.to_numpy()
 Y_test = Y_test.to_numpy()
 
 #Initializing Models
-#sgd_clf_model = linear_model.SGDClassifier(random_state=50, max_iter=10)
-rf_clf_model = ensemble.RandomForestClassifier(random_state=50, n_estimators=10)
+sgd_clf_model = linear_model.SGDClassifier(random_state=50, max_iter=10)
+rf_clf_model = ensemble.RandomForestClassifier(random_state=50, n_estimators=100)
 
 #Cross-Validating the Models.
 validateModels = ValidateModels(3)
-#validateModels.perform(sgd_clf_model, X_train, Y_train, 'skewed')
+validateModels.perform(sgd_clf_model, X_train, Y_train, 'skewed')
 validateModels.perform(rf_clf_model, X_train, Y_train, 'skewed')
-
 #Curves Analysis
 analyzeCurves = AnalyzeCurves(3)
-#analyzeCurves.perform(sgd_clf_model, X_train, Y_train)
+analyzeCurves.perform(sgd_clf_model, X_train, Y_train, 'PvR', 'predict_proba')
 analyzeCurves.perform(rf_clf_model, X_train, Y_train, 'PvR', 'predict_proba')
+# rf_clf_model Results are Best.
+
+#Fine Tuninng the Best Model.
+fineTune = FineTune('grid')
+param_grid = [
+        {'n_estimators': [100, 200]}
+    ]
+bestParams, bestModel, bestScore = fineTune.perform(rf_clf_model, param_grid, X_train, Y_train)
+print(bestParams)
+print(bestScore)
+#bestModel is the Final Model to be used for Evaluation on Test Set.
+
+#Predicting Labels for Testing Subset
+test = Test()
+predictions = test.perform(bestModel, X_test, Y_test)
