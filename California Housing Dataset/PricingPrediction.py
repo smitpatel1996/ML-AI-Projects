@@ -189,12 +189,15 @@ class ExtractImpFeats():
         self.featureImps = featureImps
         self.numOfFeats = numOfFeats
         
-    def perform(self,  bestModel, trainAttrs, trainLabels, testAttrs, testLabels):
+    def perform(self,  bestModel=None, trainAttrs=None, trainLabels=None, testAttrs=None, training=True):
         indices = np.sort(np.argpartition(np.array(self.featureImps), -self.numOfFeats)[-self.numOfFeats:])
-        trainAttrs = trainAttrs[: , indices]
-        testAttrs = testAttrs[: , indices]
-        bestModel.fit(trainAttrs, trainLabels)
-        return bestModel, testAttrs
+        if(training):
+            trainAttrs = trainAttrs[: , indices]
+            bestModel.fit(trainAttrs, trainLabels)
+            return bestModel
+        else:
+            testAttrs = testAttrs[: , indices]
+            return testAttrs
 
 class Test():
     def perform(self, model, attrSet, labelSet):
@@ -230,7 +233,6 @@ trainDF, testDF, Y_train, Y_test = split.perform(caliHousing)
 #PreProcessing the Subsets
 preProcess = PreProcess()
 X_train = preProcess.perform(trainDF)
-X_test = preProcess.perform(testDF, False)
 
 #Initializing Models
 lin_reg_model = linear_model.LinearRegression()
@@ -255,8 +257,11 @@ bestParams, bestModel, featureImps = fineTune.perform(forest_reg_model, param_gr
 
 #Extracting Important Features for bestModel
 extractImpFeats = ExtractImpFeats(featureImps, 8)
-bestModel, X_test = extractImpFeats.perform(bestModel, X_train, Y_train, X_test, Y_test)
+bestModel = extractImpFeats.perform(bestModel, X_train, Y_train)
 
+#Keeping only the Important Features for bestModel from the test attributes.
+X_test = preProcess.perform(testDF, False)
+X_test = extractImpFeats.perform(testAttrs=X_test, training=False)
 #Predicting Labels for Testing Subset
 test = Test()
 predictions = test.perform(bestModel, X_test, Y_test)
