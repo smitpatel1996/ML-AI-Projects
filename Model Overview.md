@@ -13,3 +13,6 @@
 * Linear Classification
     * Binary Classification: **Logistic Regression** -- https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html
     * Multiclass Classification: **Softmax Regression** -- *use LogisticRegression() with multi_class="multinomial" and solver="lbfgs" hyperparameters.*
+
+## Support Vector Machines (SVMs)
+
