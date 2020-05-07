@@ -15,4 +15,12 @@
     * Multiclass Classification: **Softmax Regression** -- *use LogisticRegression() with multi_class="multinomial" and solver="lbfgs" hyperparameters.*
 
 ## Support Vector Machines (SVMs)
-
+* SVM Classification
+    * Linear -- https://scikit-learn.org/stable/modules/generated/sklearn.svm.LinearSVC.html
+    * Non-Linear -- https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html
+* SVM Regression
+    * Linear -- https://scikit-learn.org/stable/modules/generated/sklearn.svm.LinearSVR.html
+    * Non-Linear -- https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVR.html
+* Online SVMs
+    * Linear -- SGD Classifier with ```loss='hinge' and alpha=(1/m*C)```
+    * Non-Linear -- Neural Nets preferred over SVMs
