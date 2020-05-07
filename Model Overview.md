@@ -16,11 +16,11 @@
 
 ## Support Vector Machines (SVMs)
 * SVM Classification
-    * Linear: LinearSVC -- https://scikit-learn.org/stable/modules/generated/sklearn.svm.LinearSVC.html
-    * Non-Linear: SVC -- https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html
+    * Linear: **LinearSVC** -- https://scikit-learn.org/stable/modules/generated/sklearn.svm.LinearSVC.html
+    * Non-Linear: **SVC** -- https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html
 * SVM Regression
-    * Linear: LinearSVR -- https://scikit-learn.org/stable/modules/generated/sklearn.svm.LinearSVR.html
-    * Non-Linear: SVR -- https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVR.html
+    * Linear: **LinearSVR** -- https://scikit-learn.org/stable/modules/generated/sklearn.svm.LinearSVR.html
+    * Non-Linear: **SVR** -- https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVR.html
 * Online SVMs
     * Linear -- SGD Classifier with ```loss='hinge' and alpha=(1/m*C)```
     * Non-Linear -- Neural Nets preferred over SVMs
