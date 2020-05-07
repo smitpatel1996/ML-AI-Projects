@@ -24,3 +24,11 @@
 * Online SVMs
     * Linear -- SGD Classifier with ```loss='hinge' and alpha=(1/m*C)```
     * Non-Linear -- Neural Nets preferred over SVMs
+
+## Decision Trees
+* Classification
+    * **DecisionTreeClassifier** -- https://scikit-learn.org/stable/modules/generated/sklearn.tree.DecisionTreeClassifier.html
+* Regression
+    * **DecisionTreeRegressor** -- https://scikit-learn.org/stable/modules/generated/sklearn.tree.DecisionTreeRegressor.html
+* Visualize Decision Tree
+    * **Export Graphviz** -- https://scikit-learn.org/stable/modules/generated/sklearn.tree.export_graphviz.html
