@@ -12,7 +12,7 @@
 
 * Linear Classification
     * Binary Classification: **Logistic Regression** -- https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html
-    * Multiclass Classification: **Softmax Regression** -- *use LogisticRegression() with multi_class="multinomial" and solver="lbfgs" hyperparameters.*
+    * Multiclass Classification: **Softmax Regression** -- *use LogisticRegression() with ```multi_class="multinomial" and solver="lbfgs"``` hyperparameters.*
 
 ## Support Vector Machines (SVMs)
 * SVM Classification
@@ -22,7 +22,7 @@
     * Linear: **LinearSVR** -- https://scikit-learn.org/stable/modules/generated/sklearn.svm.LinearSVR.html
     * Non-Linear: **SVR** -- https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVR.html
 * Online SVMs
-    * Linear -- SGD Classifier with ```loss='hinge' and alpha=(1/m*C)```
+    * Linear -- *use SGD Classifier with ```loss='hinge' and alpha=(1/m*C)``` huperparameters.*
     * Non-Linear -- Neural Nets preferred over SVMs
 
 ## Decision Trees
