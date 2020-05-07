@@ -22,7 +22,7 @@
     * Linear: **LinearSVR** -- https://scikit-learn.org/stable/modules/generated/sklearn.svm.LinearSVR.html
     * Non-Linear: **SVR** -- https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVR.html
 * Online SVMs
-    * Linear -- *use SGD Classifier with ```loss='hinge' and alpha=(1/m*C)``` huperparameters.*
+    * Linear -- *use SGDClassifier() with ```loss='hinge' and alpha=(1/m*C)``` hyperparameters.*
     * Non-Linear -- Neural Nets preferred over SVMs
 
 ## Decision Trees
