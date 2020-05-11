@@ -32,3 +32,28 @@
     * **DecisionTreeRegressor** -- https://scikit-learn.org/stable/modules/generated/sklearn.tree.DecisionTreeRegressor.html
 * Visualize Decision Tree
     * **Export Graphviz** -- https://scikit-learn.org/stable/modules/generated/sklearn.tree.export_graphviz.html
+
+## Random Forests
+* Classification
+    * **RandomForestClassifier** -- https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html
+    * **ExtraTreesClassifier** -- https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.ExtraTreesClassifier.html
+* Regression
+    * **RandomForestRegressor** -- https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestRegressor.html
+    * **ExtraTreesRegressor** -- https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.ExtraTreesRegressor.html
+
+## Ensemble Learning
+* Voting Ensemble (Hard and Soft Voting)
+    * **VotingClassifier** -- https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.VotingClassifier.html
+    * **VotingRegressor** -- https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.VotingRegressor.html
+* Bagging and Pasting
+    * **BaggingClassifier** -- https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.BaggingClassifier.html
+    * **BaggingRegressor** -- https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.BaggingRegressor.html
+* Boosting
+    * AdaBoost
+        * **AdaBoostClassifier** -- https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.AdaBoostClassifier.html
+        * **AdaBoostRegressor** -- https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.AdaBoostRegressor.html
+    * Gradient Boosting
+        * **GradientBoostingClassifier** -- https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.GradientBoostingClassifier.html
+        * **GradientBoostingRegressor** -- https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.GradientBoostingRegressor.html
+* Stacking
+    * *Sklearn Implementation Unavailabel* -- Child Predictors predict values which are used by the Parent Predictor (called a blender, or a meta learner) as inputs to make final prediction. (Basic Concept) -- *Can be used to stack bagging, boosting and other ensemble methods for even better performances possibly.*
