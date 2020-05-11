@@ -45,9 +45,11 @@
 * Voting Ensemble (Hard and Soft Voting)
     * **VotingClassifier** -- https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.VotingClassifier.html
     * **VotingRegressor** -- https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.VotingRegressor.html
+    * To use soft voting: set hyperparameter ```voting='soft'``` if all the predictors have a *predict_proba() method.*
 * Bagging and Pasting
     * **BaggingClassifier** -- https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.BaggingClassifier.html
     * **BaggingRegressor** -- https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.BaggingRegressor.html
+    * To use pasting ensemble: set hyperparameter ```bootstrap=False```.
 * Boosting
     * AdaBoost
         * **AdaBoostClassifier** -- https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.AdaBoostClassifier.html
