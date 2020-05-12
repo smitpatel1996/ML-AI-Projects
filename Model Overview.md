@@ -1,4 +1,4 @@
-# ML Model Cheat-Sheet
+# Machine Learning Cheat-Sheet (Sklearn Edition)
 ### ***Scikit-Learn UserGuide*** -- https://scikit-learn.org/stable/user_guide.html
 
 ## Linear Models
