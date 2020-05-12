@@ -1,4 +1,4 @@
-# Common ML Models
+# ML Model Cheat-Sheet
 ### ***Scikit-Learn UserGuide*** -- https://scikit-learn.org/stable/user_guide.html
 
 ## Linear Models
