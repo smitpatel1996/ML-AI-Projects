@@ -73,3 +73,29 @@
     * **Isomap** -- NLDR -- https://scikit-learn.org/stable/modules/generated/sklearn.manifold.Isomap.html
     * **t-SNE** -- NLDR, Visualizing Clusters -- https://scikit-learn.org/stable/modules/generated/sklearn.manifold.TSNE.html
     * **LDA** -- DR before Classification -- https://scikit-learn.org/stable/modules/generated/sklearn.discriminant_analysis.LinearDiscriminantAnalysis.html
+
+# Widely Used Scikit-Learn Modules
+### ***Scikit-Learn API Reference*** -- https://scikit-learn.org/stable/modules/classes.html
+
+* **sklearn.base** -- Base classes for all estimators.
+* **sklearn.cluster** -- contains popular Unsupervised Clustering Algorithms.
+* **sklearn.compose** -- used for building composite models with transformers.
+* **sklearn.decomposition** -- includes dimensionality reduction techniques.
+* **sklearn.discriminant_analysis** -- includes Linear Discriminant Analysis and Quadratic Discriminant Analysis.
+* **sklearn.ensemble** -- includes ensemble-based methods for classification, regression and anomaly detection.
+* **sklearn.feature_extraction** -- deals with feature extraction from raw data (images and text).
+* **sklearn.feature_selection** -- implements feature selection algorithms.
+* **sklearn.impute** -- missing value imputation.
+* **sklearn.linear_model** -- implements linear models.
+* **sklearn.manifold** -- implements manifold learning algorithms.
+* **sklearn.metrics** -- includes score functions, performance metrics and pairwise metrics and distance computations.
+* **sklearn.model_selection** -- tools to help select best model.
+* **sklearn.multiclass** -- implements multiclass and multilabel learning algorithms.
+* **sklearn.multioutput** -- implements multioutput regression and classification.
+* **sklearn.naive_bayes** -- implements Naive Bayes algorithms.
+* **sklearn.neighbors** -- implements the k-nearest neighbors algorithm.
+* **sklearn.neural_network** -- includes models based on neural networks.
+* **sklearn.pipeline** -- implements utilities to build a composite estimator, as a chain of transforms and estimators.
+* **sklearn.preprocessing** -- includes scaling, centering, normalization, binarization methods.
+* **sklearn.svm** -- includes Support Vector Machine algorithms.
+* **sklearn.tree** -- includes decision tree-based models for classification and regression.
