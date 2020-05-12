@@ -1,4 +1,6 @@
 # Common ML Models
+### ***Scikit-Learn UserGuide*** -- https://scikit-learn.org/stable/user_guide.html
+
 ## Linear Models
 * Linear Regression
     * Training Method: **Normal Equation** -- https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LinearRegression.html
