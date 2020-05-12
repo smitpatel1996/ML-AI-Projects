@@ -59,3 +59,16 @@
         * **GradientBoostingRegressor** -- https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.GradientBoostingRegressor.html
 * Stacking
     * *Sklearn Implementation Unavailabel* -- Child Predictors predict values which are used by the Parent Predictor (called a blender, or a meta learner) as inputs to make final prediction. (Basic Concept) -- *Can be used to stack bagging, boosting and other ensemble methods for even better performances possibly.*
+
+## Dimensionality Reduction
+* Projection Technique
+    * **PCA** -- Default, Linear Datasets -- https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
+    * **Incremental PCA** -- Large Dataset, Online -- https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.IncrementalPCA.html
+    * **Randomized PCA** -- new D << old D, Faster -- in PCA use ```svd_solver="randomized"```
+    * **Kernal PCA** -- Nonlinear Datasets -- https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.KernelPCA.html
+* Manifold Learning
+    * **LLE** -- NLDR -- https://scikit-learn.org/stable/modules/generated/sklearn.manifold.LocallyLinearEmbedding.html
+    * **MDS** -- NLDR -- https://scikit-learn.org/stable/modules/generated/sklearn.manifold.MDS.html
+    * **Isomap** -- NLDR -- https://scikit-learn.org/stable/modules/generated/sklearn.manifold.Isomap.html
+    * **t-SNE** -- NLDR, Visualizing Clusters -- https://scikit-learn.org/stable/modules/generated/sklearn.manifold.TSNE.html
+    * **LDA** -- DR before Classification -- https://scikit-learn.org/stable/modules/generated/sklearn.discriminant_analysis.LinearDiscriminantAnalysis.html
