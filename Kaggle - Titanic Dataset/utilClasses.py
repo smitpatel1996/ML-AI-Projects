@@ -1,6 +1,8 @@
 import pandas as pd
 from sklearn.impute import SimpleImputer
 from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split as tts
 
 class Utils:
@@ -38,9 +40,6 @@ class Enhance():
         return dataFrame
 
 class CleanData():
-    def __getColLocs(self, dataFrame, colsList):
-        return list(map(lambda x: dataFrame.columns.get_loc(x), colsList))
-    
     def __getRemColsList(self, dataFrame, colsList):
         return list(filter(lambda x: x not in colsList, dataFrame.columns.values.tolist()))
     
@@ -55,11 +54,43 @@ class CleanData():
         remColsList = self.__getRemColsList(dataFrame, medianList + modeList)
         if(training):
             self.transformer = ColumnTransformer(transformers=[
-                ('imp_median', SimpleImputer(strategy='median'), self.__getColLocs(dataFrame, medianList)),
-                ('imp_mode', SimpleImputer(strategy='most_frequent'), self.__getColLocs(dataFrame, modeList))
+                ('imp_median', SimpleImputer(strategy='median'), medianList),
+                ('imp_mode', SimpleImputer(strategy='most_frequent'), modeList)
             ],remainder='passthrough')
             self.transformer.fit(dataFrame)
+            self.newColsList = medianList + modeList + remColsList
         transformedNpArr = self.transformer.transform(dataFrame)
-        tempDF = pd.DataFrame(transformedNpArr, columns=medianList+modeList+remColsList)
+        tempDF = pd.DataFrame(transformedNpArr, columns=self.newColsList)
         dataFrame = tempDF.astype(self.__getDtypes(dataFrame))
         return dataFrame
+    
+class CategoryConvert():
+    def __getRemColsList(self, dataFrame, colsList):
+        return list(filter(lambda x: x not in colsList, dataFrame.columns.values.tolist()))
+     
+    def __getDtypes(self, dataFrame):
+        dtypeDict = dataFrame.dtypes.to_dict()
+        dtypeDict.update((k, v.name) for k,v in dtypeDict.items())
+        return dtypeDict
+    
+    def perform(self, dataFrame, training=True):
+        colsList = dataFrame.select_dtypes(include='category').columns.values.tolist()
+        remColsList = self.__getRemColsList(dataFrame, colsList)
+        if(training):
+            self.transformer = ColumnTransformer(transformers=[
+                ('onehot', OneHotEncoder(sparse=False), colsList)
+            ],remainder='passthrough')
+            self.transformer.fit(dataFrame)
+            self.newColsList = list(self.transformer.transformers_[0][1].get_feature_names(colsList)) + remColsList
+        transformedNpArr = self.transformer.transform(dataFrame)
+        tempDF = pd.DataFrame(transformedNpArr, columns=self.newColsList)
+        dataFrame = tempDF.astype(self.__getDtypes(dataFrame[remColsList]))
+        return dataFrame
+
+class ScaleFeature():
+    def perform(self, dataFrame, training=True):
+        if(training):
+            self.transformer = StandardScaler()
+            self.transformer.fit(dataFrame)   
+        npOutput = self.transformer.transform(dataFrame)
+        return npOutput
