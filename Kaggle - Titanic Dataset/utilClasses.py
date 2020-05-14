@@ -1,4 +1,11 @@
+import pandas as pd
+from sklearn.impute import SimpleImputer
+from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import train_test_split as tts
+
+class Utils:
+    def getNAStats(self, dataFrame):
+        return dataFrame.isna().sum()
 
 class Split():
     def __init__(self, test_size, labels, stratify=False, stratifyBy=None):
@@ -22,3 +29,37 @@ class Split():
             return self.__get_tts_from_df(dataFrame, self.test_size, attrs, self.labels, dataFrame[self.stratifyBy])
         else:
             return self.__get_tts_from_df(dataFrame, self.test_size, attrs, self.labels)
+
+class Enhance(): 
+    def perform(self, dataFrame):
+        categoryCols = ['Pclass', 'Sex', 'Embarked']
+        for i in categoryCols:
+            dataFrame[i] = dataFrame[i].astype('category')
+        return dataFrame
+
+class CleanData():
+    def __getColLocs(self, dataFrame, colsList):
+        return list(map(lambda x: dataFrame.columns.get_loc(x), colsList))
+    
+    def __getRemColsList(self, dataFrame, colsList):
+        return list(filter(lambda x: x not in colsList, dataFrame.columns.values.tolist()))
+    
+    def __getDtypes(self, dataFrame):
+        dtypeDict = dataFrame.dtypes.to_dict()
+        dtypeDict.update((k, v.name) for k,v in dtypeDict.items())
+        return dtypeDict
+    
+    def perform(self, dataFrame, training=True):
+        medianList = ['Age']
+        modeList = ['Embarked']
+        remColsList = self.__getRemColsList(dataFrame, medianList + modeList)
+        if(training):
+            self.transformer = ColumnTransformer(transformers=[
+                ('imp_median', SimpleImputer(strategy='median'), self.__getColLocs(dataFrame, medianList)),
+                ('imp_mode', SimpleImputer(strategy='most_frequent'), self.__getColLocs(dataFrame, modeList))
+            ],remainder='passthrough')
+            self.transformer.fit(dataFrame)
+        transformedNpArr = self.transformer.transform(dataFrame)
+        tempDF = pd.DataFrame(transformedNpArr, columns=medianList+modeList+remColsList)
+        dataFrame = tempDF.astype(self.__getDtypes(dataFrame))
+        return dataFrame
