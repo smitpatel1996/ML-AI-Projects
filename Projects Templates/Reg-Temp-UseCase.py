@@ -9,12 +9,10 @@ import sklearn
 from sklearn import linear_model
 from sklearn import tree
 from sklearn import ensemble
-from sklearn.base import TransformerMixin
-from sklearn.base import BaseEstimator
 from sklearn.impute import SimpleImputer
 from sklearn.metrics import mean_squared_error as mse
 from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import LabelBinarizer
+from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split as tts
 from sklearn.model_selection import cross_val_score as cvs
@@ -105,48 +103,53 @@ class Enhance(): #PreProcessing Step-1: The dataset is enhanced (manipulated) he
         return dataFrame
 
 class CleanData(): #PreProcessing Step-2: The dataset is cleaned here so that no missing values hinder the performance using algorithms, based on usecase.
-    def __getColLocs(self, dataFrame, colsList):
-        return list(map(lambda x: dataFrame.columns.get_loc(x), colsList))
+    def __getRemColsList(self, dataFrame, colsList):
+        return list(filter(lambda x: x not in colsList, dataFrame.columns.values.tolist()))
     
-    def perform(self, dataFrame, training=True):
+    def __getDtypes(self, dataFrame):
+        dtypeDict = dataFrame.dtypes.to_dict()
+        dtypeDict.update((k, v.name) for k,v in dtypeDict.items())
+        return dtypeDict
+    
+    def perform(self, dataFrame, training=True): 
         colsList = dataFrame.describe().columns.values.tolist()
-        remColsList = list(set(dataFrame.columns.values.tolist())-set(colsList))
+        remColsList = self.__getRemColsList(dataFrame, colsList)
         if(training):
             # USECASE SPECIFIC IMPLEMENTATION
             self.transformer = ColumnTransformer(transformers=[
-                ('imp_median', SimpleImputer(strategy='median'), self.__getColLocs(dataFrame, colsList))
+                ('imp_median', SimpleImputer(strategy='median'), colsList)
             ],remainder='passthrough')
             # Can implement different type of ColumnTransformer, for various number of columns which require cleaning.
             self.transformer.fit(dataFrame)
+            self.newColsList = colsList + remColsList
         transformedNpArr = self.transformer.transform(dataFrame)
-        dataFrame = pd.DataFrame(transformedNpArr, columns=colsList+remColsList)
+        tempDF = pd.DataFrame(transformedNpArr, columns=self.newColsList)
+        dataFrame = tempDF.astype(self.__getDtypes(dataFrame))
         return dataFrame
 
-class ColumnLabelBinarizer(BaseEstimator, TransformerMixin): #Used by PreProcessing Step-3.
-    def __init__(self):
-        self.encoder = LabelBinarizer()
-    def fit(self, x, y=None):
-        self.encoder.fit(x)
-        return self
-    def transform(self, x, y=None):
-        return self.encoder.transform(x)
-     
 class CategoryConvert(): #PreProcessing Step-3: The categorical values in the dataset are converted to binary labels using algorithms, based on usecase.
-    def __getColLocs(self, dataFrame, colsList):
-        return list(map(lambda x: dataFrame.columns.get_loc(x), colsList))
+    def __getRemColsList(self, dataFrame, colsList):
+        return list(filter(lambda x: x not in colsList, dataFrame.columns.values.tolist()))
+     
+    def __getDtypes(self, dataFrame):
+        dtypeDict = dataFrame.dtypes.to_dict()
+        dtypeDict.update((k, v.name) for k,v in dtypeDict.items())
+        return dtypeDict
     
     def perform(self, dataFrame, training=True):
         colsList = ['ocean_proximity']
-        remColsList = list(set(dataFrame.columns.values.tolist())-set(colsList))
+        remColsList = self.__getRemColsList(dataFrame, colsList)
         if(training):
             # USECASE SPECIFIC IMPLEMENTATION
             self.transformer = ColumnTransformer(transformers=[
-                ('label_binarizer', ColumnLabelBinarizer(), self.__getColLocs(dataFrame, colsList))
+                ('onehot', OneHotEncoder(sparse=False), colsList)
             ],remainder='passthrough')
             # Can implement different type of ColumnTransformer, for various number of columns which require conversion.
             self.transformer.fit(dataFrame)
+            self.newColsList = list(self.transformer.transformers_[0][1].get_feature_names(colsList)) + remColsList
         transformedNpArr = self.transformer.transform(dataFrame)
-        dataFrame = pd.DataFrame(transformedNpArr)
+        tempDF = pd.DataFrame(transformedNpArr, columns=self.newColsList)
+        dataFrame = tempDF.astype(self.__getDtypes(dataFrame[remColsList]))
         return dataFrame
 
 class ScaleFeature(): #PreProcessing Step-4: All the values in the dataset are scaled for better performance using algorithms, based on usecase.
