@@ -34,9 +34,9 @@ class Split():
 
 class Enhance(): 
     def perform(self, dataFrame):
+        dataFrame = dataFrame.copy()
         categoryCols = ['Pclass', 'Sex', 'Embarked']
-        for i in categoryCols:
-            dataFrame[i] = dataFrame[i].astype('category')
+        dataFrame[categoryCols] = dataFrame[categoryCols].astype('category')
         return dataFrame
 
 class CleanData():
@@ -49,6 +49,7 @@ class CleanData():
         return dtypeDict
     
     def perform(self, dataFrame, training=True):
+        dataFrame = dataFrame.copy()
         medianList = ['Age']
         modeList = ['Embarked']
         remColsList = self.__getRemColsList(dataFrame, medianList + modeList)
@@ -74,6 +75,7 @@ class CategoryConvert():
         return dtypeDict
     
     def perform(self, dataFrame, training=True):
+        dataFrame = dataFrame.copy()
         colsList = dataFrame.select_dtypes(include='category').columns.values.tolist()
         remColsList = self.__getRemColsList(dataFrame, colsList)
         if(training):
@@ -89,8 +91,23 @@ class CategoryConvert():
 
 class ScaleFeature():
     def perform(self, dataFrame, training=True):
+        dataFrame = dataFrame.copy()
         if(training):
             self.transformer = StandardScaler()
             self.transformer.fit(dataFrame)   
         npOutput = self.transformer.transform(dataFrame)
+        return npOutput
+
+class PreProcess():
+    def __init__(self):
+        self.enhance = Enhance()
+        self.cleanData = CleanData()
+        self.categoryConvert = CategoryConvert()
+        self.scaleFeature = ScaleFeature()
+
+    def perform(self, dataFrame, training=True):
+        dataFrame = self.enhance.perform(dataFrame)
+        dataFrame = self.cleanData.perform(dataFrame, training)
+        dataFrame = self.categoryConvert.perform(dataFrame, training)
+        npOutput = self.scaleFeature.perform(dataFrame, training)
         return npOutput
