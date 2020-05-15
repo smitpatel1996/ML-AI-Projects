@@ -12,6 +12,7 @@ trainLabels = trainSet[labels].astype('category')
 trainAttrs = trainSet.drop(labels, axis=1)
 
 #Exploration
+print(trainLabels['Survived'].value_counts())
 print(trainAttrs.dtypes)
 print(trainAttrs.head())
 print(utils.getNAStats(trainAttrs))
