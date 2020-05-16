@@ -1,9 +1,15 @@
+import numpy as np
 import pandas as pd
+from sklearn import metrics
 from sklearn.impute import SimpleImputer
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import RandomizedSearchCV
+from sklearn.model_selection import cross_val_score as cvs
 from sklearn.model_selection import train_test_split as tts
+from sklearn.model_selection import cross_val_predict as cvp
 
 class Utils:
     def getNAStats(self, dataFrame):
@@ -49,7 +55,6 @@ class CleanData():
         return dtypeDict
     
     def perform(self, dataFrame, training=True):
-        dataFrame = dataFrame.copy()
         medianList = ['Age']
         modeList = ['Embarked']
         remColsList = self.__getRemColsList(dataFrame, medianList + modeList)
@@ -75,7 +80,6 @@ class CategoryConvert():
         return dtypeDict
     
     def perform(self, dataFrame, training=True):
-        dataFrame = dataFrame.copy()
         colsList = dataFrame.select_dtypes(include='category').columns.values.tolist()
         remColsList = self.__getRemColsList(dataFrame, colsList)
         if(training):
@@ -91,7 +95,6 @@ class CategoryConvert():
 
 class ScaleFeature():
     def perform(self, dataFrame, training=True):
-        dataFrame = dataFrame.copy()
         if(training):
             self.transformer = StandardScaler()
             self.transformer.fit(dataFrame)   
@@ -111,3 +114,36 @@ class PreProcess():
         dataFrame = self.categoryConvert.perform(dataFrame, training)
         npOutput = self.scaleFeature.perform(dataFrame, training)
         return npOutput
+
+class ValidateModels():
+    def __init__(self, split):
+        self.split = split
+        
+    def perform(self, model, attrSet, labelSet, classDist='uniform'):
+        if(classDist == 'uniform'):
+            scores = cvs(model, attrSet, labelSet, scoring="accuracy", cv=self.split)
+            print("Accuracy Estimate: MEAN +/- STD = " + str(np.round(scores.mean(),3)) + " +/- " + str(np.round(scores.std(),3)))
+        elif(classDist == 'skewed'):
+            preds = cvp(model, attrSet, labelSet, cv=self.split)
+            print("Confusion Matrix: ")
+            print(metrics.confusion_matrix(labelSet, preds))
+            print("Classification report: ")
+            print(metrics.classification_report(labelSet, preds))
+
+class FineTune():
+    def __init__(self, type='randomized'):
+        self.type = type
+        
+    def perform(self, model, param_grid, attrSet, labelSet):
+        if(self.type == 'grid'):
+            search = GridSearchCV(model, param_grid, cv=3, scoring="accuracy")
+        elif(self.type == 'randomized'):
+            n_iter_search = 100
+            search = RandomizedSearchCV(model, param_grid, n_iter_search, cv=3, scoring='accuracy')
+        search.fit(attrSet, labelSet)
+        print()
+        print("*****==========*****")
+        print("Best Model: " + str(search.best_estimator_))
+        print("*****==========*****")
+        print()
+        return (search.best_params_, search.best_estimator_)
