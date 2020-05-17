@@ -1,3 +1,4 @@
+import random
 import numpy as np
 import pandas as pd
 from sklearn import svm
@@ -5,6 +6,7 @@ from sklearn import tree
 from sklearn import metrics
 from sklearn import ensemble
 from sklearn.impute import SimpleImputer
+from sklearn.feature_selection import RFECV
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import StandardScaler
@@ -16,7 +18,13 @@ from sklearn.model_selection import cross_val_predict as cvp
 
 class Utils:
     def getNAStats(self, dataFrame):
-        return dataFrame.isna().sum()
+        print(dataFrame.isna().sum())
+    
+    def getCorrToLabels(self, attrs, labels):
+        dataFrame = attrs
+        dataFrame['Survived'] = labels
+        corrMatrix = dataFrame.corr()
+        print(corrMatrix['Survived'].sort_values(ascending=True))
 
 class Split():
     def __init__(self, test_size, labels, stratify=False, stratifyBy=None):
@@ -41,11 +49,44 @@ class Split():
         else:
             return self.__get_tts_from_df(dataFrame, self.test_size, attrs, self.labels)
 
-class Enhance(): 
-    def perform(self, dataFrame):
+class Enhance():
+    def __getSalutation(self, name):
+        salut = (((name.split(", "))[1]).split(" "))[0]
+        if(salut == "the"):
+            salut = "Countess."
+        return salut
+    
+    def __getCategory(self, desDF, colName, val):
+        if(val <= desDF[colName].loc['25%']): return 'vl'
+        elif(val < desDF[colName].loc['50%']): return 'l'
+        elif(val == desDF[colName].loc['50%']): return random.choice(['l','h'])
+        elif(val <= desDF[colName].loc['75%']): return 'h'
+        else: return 'vh'
+    
+    def __getFamSize(self, val):
+        if(val <= 3): return 'small'
+        elif(val <= 6): return 'medium'
+        else: return 'large'
+    
+    def setDtypes(self, dataFrame, dtypeDict):
         dataFrame = dataFrame.copy()
-        categoryCols = ['Pclass', 'Sex', 'Embarked']
-        dataFrame[categoryCols] = dataFrame[categoryCols].astype('category')
+        for i in dtypeDict:
+            if(i == 'string'):
+                dataFrame[dtypeDict[i]] = dataFrame[dtypeDict[i]].astype(str)
+            else:
+                dataFrame[dtypeDict[i]] = dataFrame[dtypeDict[i]].astype(i)
+        return dataFrame
+    
+    def perform(self, dataFrame, training=True):
+        dataFrame['Name'] = dataFrame['Name'].apply(lambda x: self.__getSalutation(x))
+        dataFrame['FamSize'] = dataFrame['SibSp'] + dataFrame['Parch'] + 1
+        dataFrame = dataFrame.drop(['SibSp', 'Parch'], axis=1)
+        if(training):
+            self.desDF = dataFrame[['Age', 'Fare', 'FamSize']].describe()
+        dataFrame['Age'] = dataFrame['Age'].apply(lambda x: self.__getCategory(self.desDF, 'Age', x))
+        dataFrame['Fare'] = dataFrame['Fare'].apply(lambda x: self.__getCategory(self.desDF, 'Fare', x))
+        dataFrame['FamSize'] = dataFrame['FamSize'].apply(lambda x: self.__getFamSize(x))
+        dataFrame = self.setDtypes(dataFrame, {'category':['Name', 'FamSize', 'Age', 'Fare']})
         return dataFrame
 
 class CleanData():
@@ -112,12 +153,21 @@ class PreProcess():
         self.scaleFeature = ScaleFeature()
 
     def perform(self, dataFrame, training=True):
-        dataFrame = self.enhance.perform(dataFrame)
+        dataFrame = self.enhance.setDtypes(dataFrame, {'category':['Pclass', 'Sex', 'Embarked'], 'string':['Name']})
         dataFrame = self.cleanData.perform(dataFrame, training)
+        dataFrame = self.enhance.perform(dataFrame, training)
         dataFrame = self.categoryConvert.perform(dataFrame, training)
         npOutput = self.scaleFeature.perform(dataFrame, training)
         return npOutput
 
+class SelectFeatures():
+    def perform(self, model, attrs, labels, training=True):
+        if(training):
+            minFeatures = int(len(list(attrs[0]))*0.25)
+            self.selector = RFECV(model, cv=5, scoring="accuracy", n_jobs=-1, min_features_to_select=minFeatures)
+            self.selector.fit(attrs, labels)
+        return (self.selector.transform(attrs), labels)
+        
 class ValidateModels():
     def __init__(self, split):
         self.split = split
@@ -139,10 +189,10 @@ class FineTune():
         
     def perform(self, model, param_grid, attrSet, labelSet):
         if(self.type == 'grid'):
-            search = GridSearchCV(model, param_grid, cv=3, scoring="accuracy")
+            search = GridSearchCV(model, param_grid, cv=5, scoring="accuracy")
         elif(self.type == 'randomized'):
             n_iter_search = 100
-            search = RandomizedSearchCV(model, param_grid, n_iter_search, cv=3, scoring='accuracy')
+            search = RandomizedSearchCV(model, param_grid, n_iter_search, cv=5, scoring='accuracy')
         search.fit(attrSet, labelSet)
         print()
         print("*****==========*****")
@@ -151,20 +201,30 @@ class FineTune():
         print()
         return (search.best_params_, search.best_estimator_)
 
-impCols = ['Survived', 'Pclass', 'Sex', 'Age', 'SibSp', 'Parch', 'Fare', 'Embarked']
+
+### ==== ACTUAL IMPLEMENTATION ==== ###
+
+impCols = ['Survived', 'Pclass', 'Name', 'Sex', 'Age', 'SibSp', 'Parch', 'Fare', 'Embarked']
 trainSet = pd.read_csv("Train_Subset.csv", sep=",", usecols=impCols)
 
 labels = ['Survived']
-trainLabels = trainSet[labels].astype('category')
+trainLabels = trainSet[labels].astype(float).astype('category')
 trainAttrs = trainSet.drop(labels, axis=1)
 
-utils = Utils()
 preProcess = PreProcess()
-validateModels = ValidateModels(10)
-
 X_train = preProcess.perform(trainAttrs)
 Y_train = trainLabels.values.ravel()
+
+dtForFS = tree.DecisionTreeClassifier(random_state=50)
+selectFeatures = SelectFeatures()
+X_train, Y_train = selectFeatures.perform(dtForFS, X_train, Y_train)
+print(X_train[0])
 
 svm_model = svm.SVC(random_state=50)
 rf_model = ensemble.RandomForestClassifier(random_state=50, n_jobs=-1)
 gdb_model = ensemble.GradientBoostingClassifier(random_state=50)
+
+validateModels = ValidateModels(10)
+validateModels.perform(svm_model, X_train, Y_train)
+validateModels.perform(rf_model, X_train, Y_train)
+validateModels.perform(gdb_model, X_train, Y_train)
