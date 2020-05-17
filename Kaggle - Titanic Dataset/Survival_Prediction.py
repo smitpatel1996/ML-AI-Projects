@@ -5,6 +5,8 @@ from sklearn import svm
 from sklearn import tree
 from sklearn import metrics
 from sklearn import ensemble
+from sklearn import neighbors
+from sklearn import linear_model
 from sklearn.impute import SimpleImputer
 from sklearn.feature_selection import RFECV
 from sklearn.compose import ColumnTransformer
@@ -161,12 +163,12 @@ class PreProcess():
         return npOutput
 
 class SelectFeatures():
-    def perform(self, model, attrs, labels, training=True):
+    def perform(self, model, attrs, labels=None, training=True):
         if(training):
             minFeatures = int(len(list(attrs[0]))*0.25)
             self.selector = RFECV(model, cv=5, scoring="accuracy", n_jobs=-1, min_features_to_select=minFeatures)
             self.selector.fit(attrs, labels)
-        return (self.selector.transform(attrs), labels)
+        return self.selector.transform(attrs)
         
 class ValidateModels():
     def __init__(self, split):
@@ -191,7 +193,7 @@ class FineTune():
         if(self.type == 'grid'):
             search = GridSearchCV(model, param_grid, cv=5, scoring="accuracy")
         elif(self.type == 'randomized'):
-            n_iter_search = 100
+            n_iter_search = 25
             search = RandomizedSearchCV(model, param_grid, n_iter_search, cv=5, scoring='accuracy')
         search.fit(attrSet, labelSet)
         print()
@@ -201,30 +203,79 @@ class FineTune():
         print()
         return (search.best_params_, search.best_estimator_)
 
-
+class Test():
+    def perform(self, model, attrSet, labelSet=None):
+        predictions = model.predict(attrSet)
+        # print()
+        # print("*****==========*****")
+        # print("Accuracy Score: " + str(metrics.accuracy_score(labelSet, predictions)))
+        # print("*****==========*****")
+        # print("Confusion Matrix: ")
+        # print(metrics.confusion_matrix(labelSet, predictions))
+        # print("*****==========*****")
+        # print("Classification report: ")
+        # print(metrics.classification_report(labelSet, predictions))
+        # print("*****==========*****")
+        # print()
+        return predictions
+    
 ### ==== ACTUAL IMPLEMENTATION ==== ###
+
+preProcess = PreProcess()
+validateModels = ValidateModels(10)
+selectFeatures = SelectFeatures()
+fineTune = FineTune('grid')
 
 impCols = ['Survived', 'Pclass', 'Name', 'Sex', 'Age', 'SibSp', 'Parch', 'Fare', 'Embarked']
 trainSet = pd.read_csv("Train_Subset.csv", sep=",", usecols=impCols)
+
 
 labels = ['Survived']
 trainLabels = trainSet[labels].astype(float).astype('category')
 trainAttrs = trainSet.drop(labels, axis=1)
 
-preProcess = PreProcess()
 X_train = preProcess.perform(trainAttrs)
 Y_train = trainLabels.values.ravel()
 
-dtForFS = tree.DecisionTreeClassifier(random_state=50)
-selectFeatures = SelectFeatures()
-X_train, Y_train = selectFeatures.perform(dtForFS, X_train, Y_train)
+dtForFS = tree.DecisionTreeClassifier(random_state=50, splitter='random', max_depth=4, criterion='entropy')
+# param_grid = [
+#         {"criterion" : ["gini", "entropy"],
+#          "splitter" : ["best", "random"],
+#          "max_depth" : list(np.linspace(1,10, num=10, dtype=int)) + [None],
+#          "min_samples_split" : list(map(lambda x: round(x,3), np.linspace(0.05,1, num=20))) + [2],
+#          "max_features" : list(map(lambda x: round(x,3), np.linspace(0.05,1, num=21))) + ["auto", "sqrt", "log2", None]
+#         }
+#     ]
+# bestParams, bestModel = fineTune.perform(dtForFS, param_grid, X_train, Y_train)
+# print(bestParams)
+# validateModels.perform(bestModel, X_train, Y_train)
+X_train = selectFeatures.perform(dtForFS, X_train, labels=Y_train)
 print(X_train[0])
 
-svm_model = svm.SVC(random_state=50)
-rf_model = ensemble.RandomForestClassifier(random_state=50, n_jobs=-1)
-gdb_model = ensemble.GradientBoostingClassifier(random_state=50)
+#knn_model = neighbors.KNeighborsClassifier(n_jobs=-1)
+#lr_model = linear_model.LogisticRegression(random_state=50, n_jobs=-1)
+#linSVC_model = svm.LinearSVC(random_state=50)
+#dt_model = tree.DecisionTreeClassifier(random_state=50)
+#rf_model = ensemble.RandomForestClassifier(random_state=50, n_jobs=-1)
+#bc_model = ensemble.BaggingClassifier(random_state=50, n_jobs=-1)
+#abc_model = ensemble.AdaBoostClassifier(random_state=50)
 
-validateModels = ValidateModels(10)
-validateModels.perform(svm_model, X_train, Y_train)
-validateModels.perform(rf_model, X_train, Y_train)
-validateModels.perform(gdb_model, X_train, Y_train)
+svc_model = svm.SVC(random_state=50, C=0.5, gamma='auto', probability=True)
+et_model = ensemble.ExtraTreesClassifier(random_state=50, n_jobs=-1, n_estimators=50, criterion='entropy', max_depth=5, max_samples=0.5)
+gbc_model = ensemble.GradientBoostingClassifier(random_state=50, loss="exponential", n_estimators=750, n_iter_no_change=2, criterion="friedman_mse", init= tree.DecisionTreeClassifier(max_depth=1, criterion='entropy',random_state=50, splitter='best'))
+vc_model = ensemble.VotingClassifier(estimators=[('svc', svc_model), ('et', et_model), ('gbc', gbc_model)], voting='soft', weights=[1.25,1.0,1.0], n_jobs=-1)
+vc_model.fit(X_train, Y_train)
+
+impCols = ['PassengerId', 'Pclass', 'Name', 'Sex', 'Age', 'SibSp', 'Parch', 'Fare', 'Embarked']
+ids = ['PassengerId']
+testSet = pd.read_csv("Test_Subset.csv", sep=",", usecols=impCols)
+testIds = testSet[ids].astype(int)
+testAttrs = testSet.drop(ids, axis=1)
+X_test = preProcess.perform(testAttrs, training=False)
+X_test = selectFeatures.perform(dtForFS, X_test, training=False)
+print(X_test[0])
+
+test = Test()
+preds = test.perform(vc_model, X_test)
+testIds['Survived'] = pd.Series(preds, dtype=int)
+testIds.to_csv('myPrediction.csv', index=False)

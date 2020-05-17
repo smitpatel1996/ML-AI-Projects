@@ -890,3 +890,4 @@ PassengerId,Survived,Pclass,Name,Sex,Age,SibSp,Parch,Ticket,Fare,Cabin,Embarked
 889,0,3,"Johnston, Miss. Catherine Helen ""Carrie""",female,,1,2,W./C. 6607,23.45,,S
 890,1,1,"Behr, Mr. Karl Howell",male,26,0,0,111369,30,C148,C
 891,0,3,"Dooley, Mr. Patrick",male,32,0,0,370376,7.75,,Q
+892,1,1,"Oliva y Ocana, Dona. Fermina",female,39,0,0,PC 17758,108.9,C105,C
