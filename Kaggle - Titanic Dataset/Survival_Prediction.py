@@ -165,7 +165,7 @@ class PreProcess():
 class SelectFeatures():
     def perform(self, model, attrs, labels=None, training=True):
         if(training):
-            minFeatures = int(len(list(attrs[0]))*0.25)
+            minFeatures = int(len(list(attrs[0]))*1.0)
             self.selector = RFECV(model, cv=5, scoring="accuracy", n_jobs=-1, min_features_to_select=minFeatures)
             self.selector.fit(attrs, labels)
         return self.selector.transform(attrs)
@@ -252,18 +252,16 @@ dtForFS = tree.DecisionTreeClassifier(random_state=50, splitter='random', max_de
 X_train = selectFeatures.perform(dtForFS, X_train, labels=Y_train)
 print(X_train[0])
 
-#knn_model = neighbors.KNeighborsClassifier(n_jobs=-1)
-#lr_model = linear_model.LogisticRegression(random_state=50, n_jobs=-1)
-#linSVC_model = svm.LinearSVC(random_state=50)
-#dt_model = tree.DecisionTreeClassifier(random_state=50)
-#rf_model = ensemble.RandomForestClassifier(random_state=50, n_jobs=-1)
-#bc_model = ensemble.BaggingClassifier(random_state=50, n_jobs=-1)
-#abc_model = ensemble.AdaBoostClassifier(random_state=50)
-
+knn_model = neighbors.KNeighborsClassifier(n_jobs=-1)
+lr_model = linear_model.LogisticRegression(random_state=50, n_jobs=-1)
+dt_model = tree.DecisionTreeClassifier(random_state=50)
+rf_model = ensemble.RandomForestClassifier(random_state=50, n_jobs=-1)
+bc_model = ensemble.BaggingClassifier(random_state=50, n_jobs=-1)
+abc_model = ensemble.AdaBoostClassifier(random_state=50)
 svc_model = svm.SVC(random_state=50, C=0.5, gamma='auto', probability=True)
-et_model = ensemble.ExtraTreesClassifier(random_state=50, n_jobs=-1, n_estimators=50, criterion='entropy', max_depth=5, max_samples=0.5)
+et_model = ensemble.ExtraTreesClassifier(random_state=50, n_jobs=-1, n_estimators=50, criterion='entropy', max_depth=5)
 gbc_model = ensemble.GradientBoostingClassifier(random_state=50, loss="exponential", n_estimators=750, n_iter_no_change=2, criterion="friedman_mse", init= tree.DecisionTreeClassifier(max_depth=1, criterion='entropy',random_state=50, splitter='best'))
-vc_model = ensemble.VotingClassifier(estimators=[('svc', svc_model), ('et', et_model), ('gbc', gbc_model)], voting='soft', weights=[1.25,1.0,1.0], n_jobs=-1)
+vc_model = ensemble.VotingClassifier(estimators=[('svc', svc_model), ('et', et_model), ('gbc', gbc_model), ('knn', knn_model), ('lr', lr_model), ('dt', dt_model), ('rf', rf_model), ('bc', bc_model), ('abc', abc_model), ('dtForFS', dtForFS)], voting='soft', n_jobs=-1)
 vc_model.fit(X_train, Y_train)
 
 impCols = ['PassengerId', 'Pclass', 'Name', 'Sex', 'Age', 'SibSp', 'Parch', 'Fare', 'Embarked']
