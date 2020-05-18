@@ -253,26 +253,26 @@ print(X_train[0])
 
 #Weaker Learners
 lr_model = linear_model.LogisticRegression(random_state=50, n_jobs=-1)
-#validateModels.perform(lr_model, X_train, Y_train)
+validateModels.perform(lr_model, X_train, Y_train)
 dt_model = tree.DecisionTreeClassifier(random_state=50)
-#validateModels.perform(dt_model, X_train, Y_train)
+validateModels.perform(dt_model, X_train, Y_train)
 bc_model = ensemble.BaggingClassifier(random_state=50, n_jobs=-1)
-#validateModels.perform(bc_model, X_train, Y_train)
+validateModels.perform(bc_model, X_train, Y_train)
 abc_model = ensemble.AdaBoostClassifier(random_state=50)
-#validateModels.perform(abc_model, X_train, Y_train)
+validateModels.perform(abc_model, X_train, Y_train)
 #Stronger Learners
 dtForFS = tree.DecisionTreeClassifier(random_state=50, splitter='random', max_depth=4, criterion='entropy')
-#validateModels.perform(dtForFS, X_train, Y_train)
+validateModels.perform(dtForFS, X_train, Y_train)
 svc_model = svm.SVC(random_state=50, C=0.5, gamma='auto', probability=True)
-#validateModels.perform(svc_model, X_train, Y_train)
+validateModels.perform(svc_model, X_train, Y_train)
 et_model = ensemble.ExtraTreesClassifier(random_state=50, n_jobs=-1, n_estimators=50, criterion='entropy', max_depth=5)
-#validateModels.perform(et_model, X_train, Y_train)
+validateModels.perform(et_model, X_train, Y_train)
 gbc_model = ensemble.GradientBoostingClassifier(random_state=50, loss="exponential", n_estimators=750, n_iter_no_change=2, criterion="friedman_mse", init= tree.DecisionTreeClassifier(max_depth=1, criterion='entropy',random_state=50, splitter='best'))
-#validateModels.perform(gbc_model, X_train, Y_train)
+validateModels.perform(gbc_model, X_train, Y_train)
 
 #Voting Ensemble
 vc_model = ensemble.VotingClassifier(estimators=[('svc', svc_model), ('et', et_model), ('gbc', gbc_model), ('lr', lr_model), ('dt', dt_model), ('bc', bc_model), ('abc', abc_model), ('dtForFS', dtForFS)], voting='soft', n_jobs=-1)
-#validateModels.perform(vc_model, X_train, Y_train)
+validateModels.perform(vc_model, X_train, Y_train)
 vc_model.fit(X_train, Y_train)
 
 impCols = ['PassengerId', 'Pclass', 'Name', 'Sex', 'Age', 'SibSp', 'Parch', 'Fare', 'Embarked']
