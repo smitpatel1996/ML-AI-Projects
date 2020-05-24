@@ -5,7 +5,7 @@ from tensorflow import keras
 
 class NeuralNet():
     def __inputLayer(self, name, X_train):
-        return keras.layers.Flatten(input_shape=X_train.shape[1:], batch_size=10, name=name)
+        return keras.layers.Flatten(input_shape=X_train.shape[1:], batch_size=20, name=name)
     
     def __hiddenLayer(self, neurons, actFunc):
         return keras.layers.Dense(neurons, activation=actFunc)
@@ -16,8 +16,9 @@ class NeuralNet():
     def build(self, X_train):
         self.model = keras.models.Sequential()
         self.model.add(self.__inputLayer('input', X_train))
-        self.model.add(self.__hiddenLayer(300, 'relu'))
-        self.model.add(self.__hiddenLayer(100, 'relu'))
+        self.model.add(self.__hiddenLayer(400, 'relu'))
+        self.model.add(self.__hiddenLayer(200, 'relu'))
+        self.model.add(self.__hiddenLayer(50, 'relu'))
         self.model.add(self.__outputLayer('output', 10, 'softmax'))
     
     def compile(self):
@@ -27,7 +28,7 @@ class NeuralNet():
     def fit(self, trainSet, valSet):
         X_train, Y_train = trainSet
         X_valid, Y_valid = valSet
-        self.history = self.model.fit(X_train, Y_train, epochs=20, validation_data=(X_valid, Y_valid))
+        self.history = self.model.fit(X_train, Y_train, epochs=30, validation_data=(X_valid, Y_valid))
     
     def plotLearningCurve(self):
         pd.DataFrame(self.history.history).plot()
@@ -46,7 +47,7 @@ class NeuralNet():
         self.model.evaluate(X_test, Y_test)
     
     def predict(self, newFeVec, probability=False):
-        return self.model.predict_classes(newFeVec, batch_size=10)
+        return self.model.predict_classes(newFeVec, batch_size=20)
     
     def get_Info(self, info):
         if(info == "summary"):
