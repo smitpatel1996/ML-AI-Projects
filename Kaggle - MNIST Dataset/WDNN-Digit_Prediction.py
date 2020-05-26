@@ -46,10 +46,10 @@ class NeuralNet():
     def build(self, X_train):
         inputLayer = self.__inputLayer('input', X_train)
         hiddenLayer1 = (self.__hiddenLayer(392, 'relu'))(inputLayer)
-        hiddenLayer2 = (self.__hiddenLayer(196, 'relu'))(hiddenLayer1)
-        hiddenLayer3 = (self.__hiddenLayer(98, 'relu'))(hiddenLayer2)
-        hiddenLayer4 = (self.__hiddenLayer(49, 'relu'))(hiddenLayer3)
-        hiddenLayer5 = (self.__hiddenLayer(196, 'tanh'))(inputLayer)
+        hiddenLayer2 = (self.__hiddenLayer(392, 'relu'))(hiddenLayer1)
+        hiddenLayer3 = (self.__hiddenLayer(196, 'relu'))(hiddenLayer2)
+        hiddenLayer4 = (self.__hiddenLayer(196, 'relu'))(hiddenLayer3)
+        hiddenLayer5 = (self.__hiddenLayer(49, 'tanh'))(inputLayer)
         hiddenLayer6 = (self.__hiddenLayer(49, 'tanh'))(hiddenLayer5)
         concatLayer = self.__concatLayer([hiddenLayer4, hiddenLayer6])
         outputlayer = (self.__outputLayer('output', 10, 'softmax'))(concatLayer)
@@ -70,13 +70,13 @@ class NeuralNet():
                 print("====================")
                 
     def compile(self):
-        optimizer = keras.optimizers.SGD(lr=0.01)
+        optimizer = keras.optimizers.SGD(lr=0.05)
         self.model.compile(loss="sparse_categorical_crossentropy", optimizer=optimizer, metrics=["accuracy"])
     
     def fit(self, trainSet, valSet, epochs):
         X_train, Y_train = trainSet
         X_valid, Y_valid = valSet
-        self.history = self.model.fit(X_train, Y_train, epochs=epochs, validation_data=(X_valid, Y_valid))
+        self.history = self.model.fit(X_train, Y_train, epochs=epochs, validation_data=(X_valid, Y_valid), batch_size=32)
     
     def plotLearningCurve(self):
         pd.DataFrame(self.history.history).plot()
@@ -95,7 +95,7 @@ class NeuralNet():
         X_train, Y_train = trainSet
         self.build(X_train)
         self.compile()
-        self.history = self.model.fit(X_train, Y_train, epochs=epochs)
+        self.history = self.model.fit(X_train, Y_train, epochs=epochs, batch_size=32)
     
     def evaluate(self, testSet):
         (X_test, Y_test) = testSet
@@ -120,11 +120,11 @@ validationSplit = ValidationSplit(0.2)
 X_train, X_valid, Y_train, Y_valid = validationSplit.perform(X_train_full, Y_train_full)
 
 neuralNet = NeuralNet()
-neuralNet.assemble((X_train, Y_train), (X_valid, Y_valid), 30)
+neuralNet.assemble((X_train, Y_train), (X_valid, Y_valid), 25)
 neuralNet.plotLearningCurve()
 print(X_train_full.shape)
 print(Y_train_full.shape)
-neuralNet.compose((X_train_full, Y_train_full), 30)
+neuralNet.compose((X_train_full, Y_train_full), 25)
 
 testSet = pd.read_csv("test.csv", sep=",")
 testSet = testSet.reset_index()
