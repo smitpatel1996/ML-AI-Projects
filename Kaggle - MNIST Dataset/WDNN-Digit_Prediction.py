@@ -70,13 +70,15 @@ class NeuralNet():
                 print("====================")
                 
     def compile(self):
-        optimizer = keras.optimizers.SGD(lr=0.05)
+        optimizer = keras.optimizers.SGD(lr=0.075)
         self.model.compile(loss="sparse_categorical_crossentropy", optimizer=optimizer, metrics=["accuracy"])
     
     def fit(self, trainSet, valSet, epochs):
         X_train, Y_train = trainSet
         X_valid, Y_valid = valSet
-        self.history = self.model.fit(X_train, Y_train, epochs=epochs, validation_data=(X_valid, Y_valid), batch_size=32)
+        save_best = keras.callbacks.ModelCheckpoint("MNIST-NN.h5")
+        # early_stop = keras.callbacks.EarlyStopping(patience=25, restore_best_weights=True)
+        self.history = self.model.fit(X_train, Y_train, epochs=epochs, validation_data=(X_valid, Y_valid), batch_size=32, callbacks=[save_best])
     
     def plotLearningCurve(self):
         pd.DataFrame(self.history.history).plot()
@@ -90,12 +92,6 @@ class NeuralNet():
         self.get_Info('summary')
         self.compile()
         self.fit(trainSet, valSet, epochs)
-    
-    def compose(self, trainSet, epochs):
-        X_train, Y_train = trainSet
-        self.build(X_train)
-        self.compile()
-        self.history = self.model.fit(X_train, Y_train, epochs=epochs, batch_size=32)
     
     def evaluate(self, testSet):
         (X_test, Y_test) = testSet
@@ -116,15 +112,14 @@ preProcess = PreProcess()
 X_train_full = preProcess.perform(trainAttrs)
 Y_train_full = trainLabels.values.ravel()
 
-validationSplit = ValidationSplit(0.2)
+validationSplit = ValidationSplit(0.15)
 X_train, X_valid, Y_train, Y_valid = validationSplit.perform(X_train_full, Y_train_full)
 
+print(X_train.shape)
+print(Y_train.shape)
 neuralNet = NeuralNet()
-neuralNet.assemble((X_train, Y_train), (X_valid, Y_valid), 25)
+neuralNet.assemble((X_train, Y_train), (X_valid, Y_valid), 20)
 neuralNet.plotLearningCurve()
-print(X_train_full.shape)
-print(Y_train_full.shape)
-neuralNet.compose((X_train_full, Y_train_full), 25)
 
 testSet = pd.read_csv("test.csv", sep=",")
 testSet = testSet.reset_index()
