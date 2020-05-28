@@ -77,8 +77,8 @@ class NeuralNet():
         X_train, Y_train = trainSet
         X_valid, Y_valid = valSet
         save_best = keras.callbacks.ModelCheckpoint("MNIST-NN.h5")
-        # early_stop = keras.callbacks.EarlyStopping(patience=25, restore_best_weights=True)
-        self.history = self.model.fit(X_train, Y_train, epochs=epochs, validation_data=(X_valid, Y_valid), batch_size=32, callbacks=[save_best])
+        early_stop = keras.callbacks.EarlyStopping(patience=0.25*epochs)
+        self.history = self.model.fit(X_train, Y_train, epochs=epochs, validation_data=(X_valid, Y_valid), batch_size=32, callbacks=[save_best, early_stop])
     
     def plotLearningCurve(self):
         pd.DataFrame(self.history.history).plot()
@@ -118,7 +118,7 @@ X_train, X_valid, Y_train, Y_valid = validationSplit.perform(X_train_full, Y_tra
 print(X_train.shape)
 print(Y_train.shape)
 neuralNet = NeuralNet()
-neuralNet.assemble((X_train, Y_train), (X_valid, Y_valid), 20)
+neuralNet.assemble((X_train, Y_train), (X_valid, Y_valid), 100)
 neuralNet.plotLearningCurve()
 
 testSet = pd.read_csv("test.csv", sep=",")
