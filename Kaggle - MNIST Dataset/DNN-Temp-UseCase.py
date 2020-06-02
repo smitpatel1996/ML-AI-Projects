@@ -1,9 +1,37 @@
+import random
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 from tensorflow import keras
 import matplotlib.pyplot as plt
+from scipy.ndimage.interpolation import shift
 from sklearn.preprocessing import StandardScaler
+
+class Enhance():
+    def __shift_image(self, image, dx, dy):
+        image = image.reshape((28, 28))
+        shifted_image = shift(image, [dy, dx], cval=0, mode="constant")
+        return shifted_image.reshape([-1])
+
+    def perform(self, X_train, Y_train):
+        cols = X_train.columns.values.tolist()
+        X_train = X_train.to_numpy()
+        Y_train = Y_train.to_numpy()
+        X_train_augmented = [image for image in X_train]
+        Y_train_augmented = [label for label in Y_train]
+        shifts = [(1, 0), (-1, 0), (0, 1), (0, -1), (2, 0), (-2, 0), (0, 2), (0, -2), (3, 0), (-3, 0), (0, 3), (0, -3)]
+        for dx, dy in random.sample(shifts, 4):
+            for image, label in zip(X_train, Y_train):
+                X_train_augmented.append(self.__shift_image(image, dx, dy))
+                Y_train_augmented.append(label)
+        X_train_augmented = np.array(X_train_augmented)
+        Y_train_augmented = np.array(Y_train_augmented)
+        shuffle_idx = np.random.permutation(len(X_train_augmented))
+        X_train = X_train_augmented[shuffle_idx]
+        Y_train = Y_train_augmented[shuffle_idx]
+        X_train = pd.DataFrame(X_train, columns=cols)
+        Y_train = pd.DataFrame(Y_train)
+        return X_train, Y_train
 
 class ScaleFeature():
     def perform(self, dataFrame, training=True):
@@ -82,7 +110,7 @@ class NeuralNet():
     def compile(self, opt):
         #learning_rate = keras.optimizers.schedules.ExponentialDecay(0.001, 5, 0.999)
         if(opt == 'Nesterov'):
-            optimizer = keras.optimizers.SGD(learning_rate=0.025, momentum=0.9, nesterov=True)
+            optimizer = keras.optimizers.SGD(learning_rate=0.05, momentum=0.9, nesterov=True)
         if(opt == 'RMSprop'):
             optimizer = keras.optimizers.RMSprop(learning_rate=0.0025, rho=0.9)
         self.model.compile(loss="sparse_categorical_crossentropy", optimizer=optimizer, metrics=["accuracy"])
@@ -91,9 +119,9 @@ class NeuralNet():
         X_train, Y_train = trainSet
         X_valid, Y_valid = valSet
         save_best = keras.callbacks.ModelCheckpoint("MNIST-NN.h5", save_best_only=True)
-        early_stop = keras.callbacks.EarlyStopping(patience=int(0.2*epochs), restore_best_weights=True)
-        lr_scheduler = keras.callbacks.ReduceLROnPlateau(factor=0.5, patience=int(0.075*epochs))
-        self.history = self.model.fit(X_train, Y_train, epochs=epochs, validation_data=(X_valid, Y_valid), batch_size=50, callbacks=[save_best, early_stop, lr_scheduler])
+        early_stop = keras.callbacks.EarlyStopping(patience=15, restore_best_weights=True)
+        lr_scheduler = keras.callbacks.ReduceLROnPlateau(factor=0.75, patience=5)
+        self.history = self.model.fit(X_train, Y_train, epochs=epochs, validation_data=(X_valid, Y_valid), batch_size=100, callbacks=[save_best, early_stop, lr_scheduler])
     
     def plotLearningCurve(self):
         pd.DataFrame(self.history.history).plot()
@@ -128,17 +156,26 @@ labels = ['label']
 trainLabels = trainSet[labels].astype(int).astype('category')
 trainAttrs = trainSet.drop(labels, axis=1)
 
+enhance = Enhance()
+trainAttrs, trainLabels = enhance.perform(trainAttrs, trainLabels)
+
 preProcess = PreProcess()
 X_train_full = preProcess.perform(trainAttrs)
 Y_train_full = trainLabels.values.ravel()
 
+print("Augmented+Scaled Attrs: ", X_train_full.shape)
+print("Augmented+Scaled Labels: ", Y_train_full.shape)
+
 validationSplit = ValidationSplit(0.2)
 X_train, X_valid, Y_train, Y_valid = validationSplit.perform(X_train_full, Y_train_full)
 
-print(X_train.shape)
-print(Y_train.shape)
+print("Training Attrs: ", X_train.shape)
+print("Training Labels: ", Y_train.shape)
+print("Validation Attrs: ", X_valid.shape)
+print("Validation Labels: ", Y_valid.shape)
+
 neuralNet = NeuralNet()
-neuralNet.assemble((X_train, Y_train), (X_valid, Y_valid), 100)
+neuralNet.assemble((X_train, Y_train), (X_valid, Y_valid), 1000)
 neuralNet.plotLearningCurve()
 
 testSet = pd.read_csv("test.csv", sep=",")
