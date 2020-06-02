@@ -57,15 +57,16 @@ class ValidationSplit():
         index = np.random.choice(attrs.shape[0], int(len(attrs)*(1-self.val_size)), replace=False)
         return (np.take(attrs, index, axis=0), np.delete(attrs, index, axis=0), np.take(labels, index, axis=0), np.delete(labels, index, axis=0))
 
-class MCDropout(keras.layers.Dropout):
-    def call(self, inputs):
-        return super().call(inputs, training=True)
+class NeuralNet():
+    
+    class __MCDropout(keras.layers.Dropout):
+        def call(self, inputs):
+            return super().call(inputs, training=True)
 
-class MCAlphaDropout(keras.layers.AlphaDropout):
-    def call(self, inputs):
-        return super().call(inputs, training=True)
-
-class NeuralNet():    
+    class __MCAlphaDropout(keras.layers.AlphaDropout):
+        def call(self, inputs):
+            return super().call(inputs, training=True)
+      
     def __inputLayer(self, name, X_train):
         return keras.layers.Input(shape=X_train.shape[1:], name=name)
     
@@ -75,23 +76,31 @@ class NeuralNet():
     def __outputLayer(self, name, neurons, actFunc):
         return keras.layers.Dense(neurons, activation=actFunc, name=name)
     
-    def build(self, X_train, model='Sequential'):
-        if(model == 'Sequential'):
-            self.model = keras.models.Sequential()
-            self.model.add(self.__inputLayer('input', X_train))
-            self.model.add(self.__hiddenLayer(392, 'selu', 'lecun_normal', keras.regularizers.l1(0.0001)))
-            self.model.add(self.__hiddenLayer(392, 'selu', 'lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
-            self.model.add(self.__hiddenLayer(196, 'selu', 'lecun_normal', keras.regularizers.l1(0.0001)))
-            self.model.add(self.__hiddenLayer(196, 'selu', 'lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
-            self.model.add(self.__hiddenLayer(98, 'selu', 'lecun_normal', keras.regularizers.l1(0.0001)))
-            self.model.add(self.__hiddenLayer(98, 'selu', 'lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
-            self.model.add(self.__hiddenLayer(49, 'selu', 'lecun_normal', keras.regularizers.l1(0.0001)))
-            self.model.add(self.__hiddenLayer(49, 'selu', 'lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
-            self.model.add(self.__hiddenLayer(25, 'selu', 'lecun_normal'))
-            self.model.add(MCAlphaDropout(rate=0.25))
-            self.model.add(self.__hiddenLayer(25, 'selu', 'lecun_normal'))
-            self.model.add(MCAlphaDropout(rate=0.25))
-            self.model.add(self.__outputLayer('output', 10, 'softmax'))
+    def __bnLayer(self):
+        return keras.layers.BatchNormalization()
+
+    def __dropoutLayer(self, rate, dropType):
+        if(dropType == 'Alpha'):
+            return self.__MCAlphaDropout(rate=rate)
+        if(dropType == 'Normal'):
+            return self.__MCDropout(rate=rate)
+    
+    def build(self, X_train):
+        self.model = keras.models.Sequential()
+        self.model.add(self.__inputLayer('input', X_train))
+        self.model.add(self.__hiddenLayer(392, 'selu', 'lecun_normal', keras.regularizers.l1(0.0001)))
+        self.model.add(self.__hiddenLayer(392, 'selu', 'lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
+        self.model.add(self.__hiddenLayer(196, 'selu', 'lecun_normal', keras.regularizers.l1(0.0001)))
+        self.model.add(self.__hiddenLayer(196, 'selu', 'lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
+        self.model.add(self.__hiddenLayer(98, 'selu', 'lecun_normal', keras.regularizers.l1(0.0001)))
+        self.model.add(self.__hiddenLayer(98, 'selu', 'lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
+        self.model.add(self.__hiddenLayer(49, 'selu', 'lecun_normal', keras.regularizers.l1(0.0001)))
+        self.model.add(self.__hiddenLayer(49, 'selu', 'lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
+        self.model.add(self.__hiddenLayer(25, 'selu', 'lecun_normal'))
+        self.model.add(self.__dropoutLayer(0.25, 'Alpha'))
+        self.model.add(self.__hiddenLayer(25, 'selu', 'lecun_normal'))
+        self.model.add(self.__dropoutLayer(0.25, 'Alpha'))
+        self.model.add(self.__outputLayer('output', 10, 'softmax'))
     
     def get_Info(self, info):
         if(info == "summary"):
