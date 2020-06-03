@@ -9,8 +9,7 @@ from sklearn.preprocessing import StandardScaler
 
 class Enhance():
     def __imgEnhance(self, npImg):
-        enhance = ImageEnhance.Sharpness(Image.fromarray(npImg.astype('uint8'), 'RGB'))
-        return np.array(enhance.enhance(1.75)).flatten()
+        return np.array(npImg).flatten()
         
     def perform(self, X_train):
         X_train = np.array(list(map(lambda x: self.__imgEnhance(x), X_train)))
@@ -86,6 +85,7 @@ class NeuralNet():
             plt.xlabel("Learning Rate")
             plt.ylabel("Loss")
             # plt.xscale('log')
+            plt.grid()
             plt.show()
             os.remove('tmp.hdf5')
     
@@ -208,7 +208,7 @@ class NeuralNet():
         self.model.add(self.__hiddenLayer(30, 'selu', 'lecun_normal'))
         self.model.add(self.__dropoutLayer(0.25, 'Alpha'))
         self.model.add(self.__hiddenLayer(30, 'selu', 'lecun_normal'))
-        self.model.add(self.__dropoutLayer(0.25, 'Alpha'))   
+        self.model.add(self.__dropoutLayer(0.25, 'Alpha'))
         self.model.add(self.__outputLayer('output', 10, 'softmax'))
     
     def get_Info(self, info):
@@ -249,12 +249,13 @@ class NeuralNet():
             return []
         else:
             self.compile(self.optimizer, self.optLR)
+            if(scheduler == 'None'): return []
             if(scheduler == 'Perf'): lr_scheduler = keras.callbacks.ReduceLROnPlateau(factor=0.5, patience=5)
             if(scheduler == '1Cycle'): lr_scheduler = self.__OneCycleLR(self.optLR)
             return [lr_scheduler]
     
     def plotLearningCurve(self):
-        self.compile('Nesterov', self.optLR)
+        self.compile(self.optimizer, self.optLR)
         pd.DataFrame(self.history.history).plot()
         plt.grid(True)
         plt.show()
@@ -263,13 +264,13 @@ class NeuralNet():
         X_train, Y_train = trainSet
         X_valid, Y_valid = valSet
         self.optimizer = 'Nesterov'
-        self.batch_size = 500
+        self.batch_size = 1000
         self.build(X_train)
         self.get_Info('Summary')
         self.compile(self.optimizer)
         self.findOptLR(trainSet, valSet)
         save_best = keras.callbacks.ModelCheckpoint("CIFAR10-NN.h5", save_best_only=True)
-        early_stop = keras.callbacks.EarlyStopping(patience=10, restore_best_weights=True)
+        early_stop = keras.callbacks.EarlyStopping(patience=15, restore_best_weights=True)
         callBacks = [save_best, early_stop] + self.scheduleLR('1Cycle')
         self.fit(trainSet, valSet, epochs, self.batch_size, callBacks)
     
@@ -302,7 +303,7 @@ print("Validation Attrs: ", X_valid.shape)
 print("Validation Labels: ", Y_valid.shape)
 
 neuralNet = NeuralNet()
-neuralNet.assemble((X_train, Y_train), (X_valid, Y_valid), 30)
+neuralNet.assemble((X_train, Y_train), (X_valid, Y_valid), 15)
 neuralNet.plotLearningCurve()
 
 preds = neuralNet.predict(preProcess.perform(X_test, False))
