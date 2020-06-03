@@ -191,12 +191,24 @@ class NeuralNet():
     def build(self, X_train):
         self.model = keras.models.Sequential()
         self.model.add(self.__inputLayer('input', X_train))
-        n = 3000
-        for i in range(5):
-            self.model.add(self.__hiddenLayer(n, 'selu', 'lecun_normal', kernelReg=keras.regularizers.l1_l2(0.00001, 0.0001)))    
-            n = int(n/(100)**0.2)
-        self.model.add(self.__hiddenLayer(n, 'selu', 'lecun_normal'))
-        self.model.add(self.__dropoutLayer(0.1, 'Alpha'))   
+        self.model.add(self.__hiddenLayer(4000, 'selu', 'lecun_normal', kernelReg=keras.regularizers.l1(0.0001)))
+        self.model.add(self.__hiddenLayer(4000, 'selu', 'lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
+        self.model.add(self.__hiddenLayer(2000, 'selu', 'lecun_normal', kernelReg=keras.regularizers.l2(0.0001)))
+        self.model.add(self.__hiddenLayer(2000, 'selu', 'lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
+        self.model.add(self.__hiddenLayer(1000, 'selu', 'lecun_normal', kernelReg=keras.regularizers.l2(0.0001)))
+        self.model.add(self.__hiddenLayer(1000, 'selu', 'lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
+        self.model.add(self.__hiddenLayer(500, 'selu', 'lecun_normal', kernelReg=keras.regularizers.l2(0.0001)))
+        self.model.add(self.__hiddenLayer(500, 'selu', 'lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
+        self.model.add(self.__hiddenLayer(250, 'selu', 'lecun_normal', kernelReg=keras.regularizers.l2(0.0001)))
+        self.model.add(self.__hiddenLayer(250, 'selu', 'lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
+        self.model.add(self.__hiddenLayer(125, 'selu', 'lecun_normal', kernelReg=keras.regularizers.l2(0.0001)))
+        self.model.add(self.__hiddenLayer(125, 'selu', 'lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
+        self.model.add(self.__hiddenLayer(60, 'selu', 'lecun_normal', kernelReg=keras.regularizers.l2(0.0001)))
+        self.model.add(self.__hiddenLayer(60, 'selu', 'lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
+        self.model.add(self.__hiddenLayer(30, 'selu', 'lecun_normal'))
+        self.model.add(self.__dropoutLayer(0.25, 'Alpha'))
+        self.model.add(self.__hiddenLayer(30, 'selu', 'lecun_normal'))
+        self.model.add(self.__dropoutLayer(0.25, 'Alpha'))   
         self.model.add(self.__outputLayer('output', 10, 'softmax'))
     
     def get_Info(self, info):
@@ -226,9 +238,10 @@ class NeuralNet():
         self.history = self.model.fit(X_train, Y_train, epochs=epochs, validation_data=(X_valid, Y_valid), batch_size=batchSize, callbacks=callBacks)
     
     def findOptLR(self, trainSet, valSet):
-        lr_finder = self.__LRFinder(min_lr=0.001, max_lr=10.)
-        self.fit(trainSet, valSet, 2, 400, [lr_finder])
+        lr_finder = self.__LRFinder(min_lr=0.0001, max_lr=10.)
+        self.fit(trainSet, valSet, 2, self.batch_size, [lr_finder])
         self.optLR = float(input("\nEnter the observed optimal LR: "))/10.0
+        print("Optimal LR is set to:", self.optLR)
     
     def scheduleLR(self, scheduler='1Cycle'):
         if(scheduler == 'Exp'):
@@ -250,6 +263,7 @@ class NeuralNet():
         X_train, Y_train = trainSet
         X_valid, Y_valid = valSet
         self.optimizer = 'Nesterov'
+        self.batch_size = 500
         self.build(X_train)
         self.get_Info('Summary')
         self.compile(self.optimizer)
@@ -257,7 +271,7 @@ class NeuralNet():
         save_best = keras.callbacks.ModelCheckpoint("CIFAR10-NN.h5", save_best_only=True)
         early_stop = keras.callbacks.EarlyStopping(patience=10, restore_best_weights=True)
         callBacks = [save_best, early_stop] + self.scheduleLR('1Cycle')
-        self.fit(trainSet, valSet, epochs, 400, callBacks)
+        self.fit(trainSet, valSet, epochs, self.batch_size, callBacks)
     
     def evaluate(self, testSet):
         (X_test, Y_test) = testSet
