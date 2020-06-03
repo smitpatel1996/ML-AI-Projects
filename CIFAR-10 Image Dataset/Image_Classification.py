@@ -193,7 +193,7 @@ class NeuralNet():
         self.model.add(self.__inputLayer('input', X_train))
         n = 3000
         for i in range(5):
-            self.model.add(self.__hiddenLayer(n, 'selu', 'lecun_normal', kernelReg=keras.regularizers.l1_l2(0.0001, 0.001)))    
+            self.model.add(self.__hiddenLayer(n, 'selu', 'lecun_normal', kernelReg=keras.regularizers.l1_l2(0.00001, 0.0001)))    
             n = int(n/(100)**0.2)
         self.model.add(self.__hiddenLayer(n, 'selu', 'lecun_normal'))
         self.model.add(self.__dropoutLayer(0.1, 'Alpha'))   
@@ -255,7 +255,7 @@ class NeuralNet():
         self.compile(self.optimizer)
         self.findOptLR(trainSet, valSet)
         save_best = keras.callbacks.ModelCheckpoint("CIFAR10-NN.h5", save_best_only=True)
-        early_stop = keras.callbacks.EarlyStopping(patience=12, restore_best_weights=True)
+        early_stop = keras.callbacks.EarlyStopping(patience=25, restore_best_weights=True)
         callBacks = [save_best, early_stop] + self.scheduleLR('1Cycle')
         self.fit(trainSet, valSet, epochs, 400, callBacks)
     
@@ -288,7 +288,7 @@ print("Validation Attrs: ", X_valid.shape)
 print("Validation Labels: ", Y_valid.shape)
 
 neuralNet = NeuralNet()
-neuralNet.assemble((X_train, Y_train), (X_valid, Y_valid), 60)
+neuralNet.assemble((X_train, Y_train), (X_valid, Y_valid), 50)
 neuralNet.plotLearningCurve()
 
 preds = neuralNet.predict(preProcess.perform(X_test, False))
