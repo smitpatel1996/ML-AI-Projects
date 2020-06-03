@@ -10,7 +10,7 @@ from sklearn.preprocessing import StandardScaler
 class Enhance():
     def __imgEnhance(self, npImg):
         enhance = ImageEnhance.Sharpness(Image.fromarray(npImg.astype('uint8'), 'RGB'))
-        return np.array(enhance.enhance(1.5)).flatten()
+        return np.array(enhance.enhance(1.75)).flatten()
         
     def perform(self, X_train):
         X_train = np.array(list(map(lambda x: self.__imgEnhance(x), X_train)))
@@ -228,7 +228,7 @@ class NeuralNet():
     def findOptLR(self, trainSet, valSet):
         lr_finder = self.__LRFinder(min_lr=0.001, max_lr=10.)
         self.fit(trainSet, valSet, 2, 400, [lr_finder])
-        self.optLR = float(input("\nEnter the observed optimal LR: "))
+        self.optLR = float(input("\nEnter the observed optimal LR: "))/10.0
     
     def scheduleLR(self, scheduler='1Cycle'):
         if(scheduler == 'Exp'):
@@ -255,7 +255,7 @@ class NeuralNet():
         self.compile(self.optimizer)
         self.findOptLR(trainSet, valSet)
         save_best = keras.callbacks.ModelCheckpoint("CIFAR10-NN.h5", save_best_only=True)
-        early_stop = keras.callbacks.EarlyStopping(patience=25, restore_best_weights=True)
+        early_stop = keras.callbacks.EarlyStopping(patience=10, restore_best_weights=True)
         callBacks = [save_best, early_stop] + self.scheduleLR('1Cycle')
         self.fit(trainSet, valSet, epochs, 400, callBacks)
     
@@ -288,7 +288,7 @@ print("Validation Attrs: ", X_valid.shape)
 print("Validation Labels: ", Y_valid.shape)
 
 neuralNet = NeuralNet()
-neuralNet.assemble((X_train, Y_train), (X_valid, Y_valid), 50)
+neuralNet.assemble((X_train, Y_train), (X_valid, Y_valid), 30)
 neuralNet.plotLearningCurve()
 
 preds = neuralNet.predict(preProcess.perform(X_test, False))
