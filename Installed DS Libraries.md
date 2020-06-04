@@ -19,7 +19,7 @@
 #### Jupyter Environment
 * JupyterLab -- pip3 install jupyterlab -- 2.1.0
 * Notebook -- pip3 install notebook -- 6.0.3
-* Voila -- pip3 install voil -- 0.1.21
+* Voila -- pip3 install voila -- 0.1.21
 
 #### Computer Vision Environment Setup
 * OpenCV-Python -- pip3 install opencv-python -- 4.2.0
