@@ -225,12 +225,12 @@ class NeuralNet():
                 print("Layer Biases:", biases)
                 print("====================")
                 
-    def compile(self, opt, learning_rate=0.01, expDecay=None):
-        if(expDecay is not None): learning_rate = keras.optimizers.schedules.ExponentialDecay(learning_rate, expDecay[0], expDecay[1])
+    def compile(self, opt, learning_rate=0.01):
+        if(opt  == 'ExpDecay'): learning_rate = keras.optimizers.schedules.ExponentialDecay(learning_rate, self.hyperParams['expDecay'][0], self.hyperParams['expDecay'][1])
         if(opt == 'Nesterov'): optimizer = keras.optimizers.SGD(learning_rate=learning_rate, momentum=0.9, nesterov=True)
         if(opt == 'RMSprop'): optimizer = keras.optimizers.RMSprop(learning_rate=learning_rate, rho=0.9)
         if(opt == 'Nadam'): optimizer = keras.optimizers.Nadam(learning_rate=learning_rate)
-        self.model.compile(loss="sparse_categorical_crossentropy", optimizer=optimizer, metrics=["accuracy"])
+        self.model.compile(loss=self.hyperParams['loss'], optimizer=optimizer, metrics=self.hyperParams['metrics'])
     
     def fit(self, trainSet, valSet, epochs, batchSize, callBacks=None):
         X_train, Y_train = trainSet
@@ -238,50 +238,54 @@ class NeuralNet():
         self.history = self.model.fit(X_train, Y_train, epochs=epochs, validation_data=(X_valid, Y_valid), batch_size=batchSize, callbacks=callBacks)
     
     def findOptLR(self, trainSet, valSet):
-        lr_finder = self.__LRFinder(min_lr=0.0001, max_lr=10.)
-        self.fit(trainSet, valSet, 2, self.batch_size, [lr_finder])
-        self.optLR = float(input("\nEnter the observed optimal LR: "))/10.0
-        print("Optimal LR is set to:", self.optLR)
+        self.compile(self.hyperParams['optimizer'])
+        lr_finder = self.__LRFinder(min_lr=self.hyperParams['lrFinder'][0], max_lr=self.hyperParams['lrFinder'][1])
+        self.fit(trainSet, valSet, self.hyperParams['lrFinder'][2], self.hyperParams['batchSize'], [lr_finder])
+        self.hyperParams['optLR'] = float(input("\nEnter the observed optimal LR: "))/10.0
+        print("Optimal LR is set to:", self.hyperParams['optLR'])
     
-    def scheduleLR(self, scheduler='1Cycle'):
-        if(scheduler == 'Exp'):
-            self.compile(self.optimizer, self.optLR, (10, 0.99))
-            return []
-        else:
-            self.compile(self.optimizer, self.optLR)
-            if(scheduler == 'None'): return []
-            if(scheduler == 'Perf'): lr_scheduler = keras.callbacks.ReduceLROnPlateau(factor=0.5, patience=5)
-            if(scheduler == '1Cycle'): lr_scheduler = self.__OneCycleLR(self.optLR)
-            return [lr_scheduler]
+    def scheduleLR(self, scheduler):
+        self.compile(self.hyperParams['optimizer'], self.hyperParams['optLR'])
+        if(scheduler in ('None', 'Exp')): return []
+        if(scheduler == 'Perf'): lr_scheduler = keras.callbacks.ReduceLROnPlateau(factor=self.hyperParams['perf'][0], patience=self.hyperParams['perf'][1])
+        if(scheduler == '1Cycle'):
+            if(self.hyperParams['optimizer'] == 'Nesterov'): lr_scheduler = self.__OneCycleLR(self.hyperParams['optLR'])
+            else: lr_scheduler = self.__OneCycleLR(self.hyperParams['optLR'], False)
+        return [lr_scheduler]
     
     def plotLearningCurve(self):
-        self.compile(self.optimizer, self.optLR)
         pd.DataFrame(self.history.history).plot()
         plt.grid(True)
         plt.show()
     
-    def assemble(self, trainSet, valSet, epochs):
+    def assemble(self, trainSet, valSet):
         X_train, Y_train = trainSet
-        X_valid, Y_valid = valSet
-        self.optimizer = 'Nesterov'
-        self.batch_size = 1000
         self.build(X_train)
         self.get_Info('Summary')
-        self.compile(self.optimizer)
+        
+        self.hyperParams = {'optimizer': 'Nesterov',
+                            'loss': "sparse_categorical_crossentropy",
+                            'metrics': ["accuracy"],
+                            'lrFinder': (0.0001, 10.0, 2),
+                            'batchSize': 1000,
+                            'eStopPat': 10,
+                            'scheduler': '1Cycle',
+                            'epochs': 15}
+        
         self.findOptLR(trainSet, valSet)
         save_best = keras.callbacks.ModelCheckpoint("CIFAR10-NN.h5", save_best_only=True)
-        early_stop = keras.callbacks.EarlyStopping(patience=15, restore_best_weights=True)
-        callBacks = [save_best, early_stop] + self.scheduleLR('1Cycle')
-        self.fit(trainSet, valSet, epochs, self.batch_size, callBacks)
+        early_stop = keras.callbacks.EarlyStopping(patience=self.hyperParams['eStopPat'], restore_best_weights=True)
+        callBacks = [save_best, early_stop] + self.scheduleLR(self.hyperParams['scheduler'])
+        self.fit(trainSet, valSet, self.hyperParams['epochs'], self.hyperParams['batchSize'], callBacks)
     
     def evaluate(self, testSet):
-        (X_test, Y_test) = testSet
+        X_test, Y_test = testSet
         self.model.evaluate(X_test, Y_test)
     
-    def predict(self, newFeVec, mcDrop=True):
-        if(mcDrop):
-            preds = np.stack([self.model.predict(newFeVec) for i in range(20)])
-            preds = np.round(((preds).mean(axis=0)),2)
+    def predict(self, newFeVec, mcDrop=None):
+        if(mcDrop is not None):
+            preds = np.stack([self.model.predict(newFeVec) for i in range(mcDrop)])
+            preds = np.round(((preds).mean(axis=0)),4)
             print("Probabilities:", preds)
         else: preds = self.model.predict(newFeVec)
         return preds.argmax(axis=-1)
@@ -303,7 +307,7 @@ print("Validation Attrs: ", X_valid.shape)
 print("Validation Labels: ", Y_valid.shape)
 
 neuralNet = NeuralNet()
-neuralNet.assemble((X_train, Y_train), (X_valid, Y_valid), 15)
+neuralNet.assemble((X_train, Y_train), (X_valid, Y_valid))
 neuralNet.plotLearningCurve()
 
 preds = neuralNet.predict(preProcess.perform(X_test, False))
