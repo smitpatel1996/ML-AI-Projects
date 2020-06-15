@@ -217,7 +217,6 @@ class NeuralNet():
         if(dropType == 'Normal'): return self.__MCDropout(rate=rate)
     
     def build(self, X_train):
-        tf.config.experimental_run_functions_eagerly(True)
         self.model = keras.models.Sequential()
         self.model.add(self.__inputLayer('input', X_train))
         self.model.add(self.__convLayer(16, 9, "selu", kernelInit='lecun_normal', kernelReg=keras.regularizers.l2(0.0001)))
@@ -242,7 +241,6 @@ class NeuralNet():
         self.model.add(self.__denseLayer(16, 'selu', 'lecun_normal'))
         self.model.add(self.__dropoutLayer(0.25, 'Alpha'))
         self.model.add(self.__outputLayer('output', 10, 'softmax'))
-        tf.config.experimental_run_functions_eagerly(False)
     
     def get_Info(self, info):
         if(info == "Summary"):
