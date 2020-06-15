@@ -173,22 +173,14 @@ class NeuralNet():
                 self.hiddenLayers = hiddenLayers
                 self.activation = keras.activations.get(actFunc)
         
-        def SEBlock(self, tensor, ratio=16):
-            init = tensor
-            filters = init.shape[-1]
-            se_shape = (1, 1, filters)
-            se = keras.layers.GlobalAveragePooling2D()(init)
-            se = keras.layers.Reshape(se_shape)(se)
-            se = keras.layers.Dense(filters // ratio, activation='relu', kernel_initializer='he_normal', use_bias=False)(se)
-            se = keras.layers.Dense(filters, activation='sigmoid', kernel_initializer='he_normal', use_bias=False)(se)
-            x = keras.layers.Multiply()([init, se])
-            return x
-            
         def call(self, inputs):
             Z = inputs
-            for layer in self.hiddenLayers:
+            for layer in self.hiddenLayers[:2]:
                 Z = layer(Z)
-            #Z = self.SEBlock(Z)
+            seVar = Z
+            for layer in self.hiddenLayers[2:-1]:
+                seVar = layer(seVar)
+            Z = self.hiddenLayers[-1]([Z, seVar])
             return self.activation(Z+inputs)
     
         def get_config(self):
@@ -207,7 +199,12 @@ class NeuralNet():
         return keras.layers.MaxPooling2D(poolSize, stride, padding)
     def __RESEBlockLayer(self, filters):
         hiddenLayers = [self.__convLayer(filters, 3, "selu", kernelInit='lecun_normal'),
-                        self.__convLayer(filters, 3, "selu", kernelInit='lecun_normal')]
+                        self.__convLayer(filters, 3, "selu", kernelInit='lecun_normal'),
+                        keras.layers.GlobalAveragePooling2D(),
+                        keras.layers.Reshape((1,1,filters)),
+                        keras.layers.Dense(filters // 16, activation='relu', kernel_initializer='he_normal', use_bias=False),
+                        keras.layers.Dense(filters, activation='sigmoid', kernel_initializer='he_normal', use_bias=False),
+                        keras.layers.Multiply()]
         return self.__RESEBlock(hiddenLayers)
     def __gobalPoolLayer(self):
         return keras.layers.GlobalAveragePooling2D()
@@ -362,7 +359,7 @@ testIds.ImageId = testIds.ImageId + 1
 testAttrs = testSet.drop(ids, axis=1)
 X_test = preProcess.perform(testAttrs, training=False)
 print(X_test.shape)
-preds = neuralNet.predict(X_test)
+preds = neuralNet.predict(X_test, 30)
 print("Final Classes: ", preds)
 print(preds.shape)
 testIds['Label'] = pd.Series(preds, dtype=int)
