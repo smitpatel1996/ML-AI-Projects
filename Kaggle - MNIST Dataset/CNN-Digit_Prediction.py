@@ -198,12 +198,12 @@ class NeuralNet():
     def __maxPoolLayer(self, poolSize=2, stride=None, padding="valid"):
         return keras.layers.MaxPooling2D(poolSize, stride, padding)
     def __RESEBlockLayer(self, filters):
-        hiddenLayers = [self.__convLayer(filters, 3, "selu", kernelInit='lecun_normal'),
-                        self.__convLayer(filters, 3, "selu", kernelInit='lecun_normal'),
+        hiddenLayers = [self.__convLayer(filters, 3, "selu", kernelInit='lecun_normal', kernelReg=keras.regularizers.l2(0.0001)),
+                        self.__convLayer(filters, 3, "selu", kernelInit='lecun_normal', kernelReg=keras.regularizers.l2(0.0001)),
                         keras.layers.GlobalAveragePooling2D(),
                         keras.layers.Reshape((1,1,filters)),
-                        keras.layers.Dense(filters // 16, activation='relu', kernel_initializer='he_normal', use_bias=False),
-                        keras.layers.Dense(filters, activation='sigmoid', kernel_initializer='he_normal', use_bias=False),
+                        keras.layers.Dense(filters // 16, activation='selu', kernel_initializer='lecun_normal', use_bias=False, kernel_regularizer=keras.regularizers.l1(0.0001)),
+                        keras.layers.Dense(filters, activation='sigmoid', kernel_initializer='lecun_normal', use_bias=False, kernel_regularizer=keras.regularizers.l1(0.0001)),
                         keras.layers.Multiply()]
         return self.__RESEBlock(hiddenLayers)
     def __gobalPoolLayer(self):
@@ -220,20 +220,20 @@ class NeuralNet():
         tf.config.experimental_run_functions_eagerly(True)
         self.model = keras.models.Sequential()
         self.model.add(self.__inputLayer('input', X_train))
-        self.model.add(self.__convLayer(16, 9, "relu", kernelInit='he_normal'))
-        self.model.add(self.__convLayer(32, 7, "relu", kernelInit='he_normal'))
+        self.model.add(self.__convLayer(16, 9, "selu", kernelInit='lecun_normal', kernelReg=keras.regularizers.l2(0.0001)))
+        self.model.add(self.__convLayer(32, 7, "selu", kernelInit='lecun_normal', kernelReg=keras.regularizers.l2(0.0001)))
         self.model.add(self.__lrnLayer(4))
         self.model.add(self.__maxPoolLayer())
-        self.model.add(self.__convLayer(64, 1, "relu", kernelInit='he_normal'))
-        self.model.add(self.__convLayer(64, 5, "relu", kernelInit='he_normal'))
-        self.model.add(self.__convLayer(64, 1, "relu", kernelInit='he_normal'))
-        self.model.add(self.__convLayer(64, 3, "relu", kernelInit='he_normal'))
+        self.model.add(self.__convLayer(64, 1, "selu", kernelInit='lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
+        self.model.add(self.__convLayer(64, 5, "selu", kernelInit='lecun_normal', kernelReg=keras.regularizers.l2(0.0001)))
+        self.model.add(self.__convLayer(64, 1, "selu", kernelInit='lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
+        self.model.add(self.__convLayer(64, 3, "selu", kernelInit='lecun_normal', kernelReg=keras.regularizers.l2(0.0001)))
         self.model.add(self.__lrnLayer(4))
         self.model.add(self.__maxPoolLayer())
-        self.model.add(self.__convLayer(128, 1, "relu", kernelInit='he_normal'))
+        self.model.add(self.__convLayer(128, 1, "selu", kernelInit='lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
         self.model.add(self.__RESEBlockLayer(128))
         self.model.add(self.__maxPoolLayer())
-        self.model.add(self.__convLayer(256, 1, "selu", kernelInit='lecun_normal'))
+        self.model.add(self.__convLayer(256, 1, "selu", kernelInit='lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
         self.model.add(self.__RESEBlockLayer(256))
         self.model.add(self.__maxPoolLayer())
         self.model.add(self.__gobalPoolLayer())
@@ -301,7 +301,7 @@ class NeuralNet():
                             'metrics': ["accuracy"],
                             'lrFinder': (0.0001, 10.0, 2),
                             'batchSize': 100,
-                            'eStopPat': 8,
+                            'eStopPat': 15,
                             'scheduler': '1Cycle',
                             'epochs': 30}
         
@@ -338,7 +338,7 @@ Y_train_full = trainLabels.values.ravel()
 print("Scaled Attrs: ", X_train_full.shape)
 print("Scaled Labels: ", Y_train_full.shape)
 
-validationSplit = ValidationSplit(0.2)
+validationSplit = ValidationSplit(0.15)
 X_train, X_valid, Y_train, Y_valid = validationSplit.perform(X_train_full, Y_train_full)
 
 print("Training Attrs: ", X_train.shape)
@@ -358,6 +358,7 @@ testIds = testSet[ids].astype(int)
 testIds.ImageId = testIds.ImageId + 1
 testAttrs = testSet.drop(ids, axis=1)
 X_test = preProcess.perform(testAttrs, training=False)
+X_test = X_test.reshape(X_test.shape[0], 28, 28)[..., np.newaxis]
 print(X_test.shape)
 preds = neuralNet.predict(X_test, 30)
 print("Final Classes: ", preds)
