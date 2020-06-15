@@ -176,10 +176,47 @@ class NeuralNet():
         def call(self, inputs):
             return super().call(inputs, training=True)
     
+    class __RESEBlock(keras.layers.Layer):
+        def __init__(self, hiddenLayers, actFunc="relu", **kwargs):
+                super().__init__(**kwargs)
+                self.hiddenLayers = hiddenLayers
+                self.activation = keras.activations.get(actFunc)
+        
+        def call(self, inputs):
+            Z = inputs
+            for layer in self.hiddenLayers[:2]:
+                Z = layer(Z)
+            seVar = Z
+            for layer in self.hiddenLayers[2:-1]:
+                seVar = layer(seVar)
+            Z = self.hiddenLayers[-1]([Z, seVar])
+            return self.activation(Z+inputs)
+    
+        def get_config(self):
+            base_config = super().get_config()
+            return {**base_config}
+     
     def __inputLayer(self, name, X_train):
         return keras.layers.Input(shape=X_train.shape[1:], name=name)
-    def __hiddenLayer(self, neurons, actFunc, kernelInit=None, kernelReg=None, kernelConst=None):
+    def __denseLayer(self, neurons, actFunc, kernelInit=None, kernelReg=None, kernelConst=None):
         return keras.layers.Dense(neurons, activation=actFunc, kernel_initializer=kernelInit, kernel_regularizer=kernelReg, kernel_constraint=kernelConst)
+    def __convLayer(self, channels, kernelSize, actFunc, stride=(1,1), padding="same", kernelInit=None, kernelReg=None, kernelConst=None):
+        return keras.layers.Conv2D(channels, kernelSize, stride, padding, activation=actFunc, kernel_initializer=kernelInit, kernel_regularizer=kernelReg, kernel_constraint=kernelConst)
+    def __lrnLayer(self, depthRadius, bias=1, alpha=1, beta=0.5):
+        return keras.layers.Lambda(lambda X: tf.nn.local_response_normalization(X, depthRadius, bias, alpha, beta))
+    def __maxPoolLayer(self, poolSize=2, stride=None, padding="valid"):
+        return keras.layers.MaxPooling2D(poolSize, stride, padding)
+    def __RESEBlockLayer(self, filters):
+        hiddenLayers = [self.__convLayer(filters, 3, "selu", kernelInit='lecun_normal', kernelReg=keras.regularizers.l2(0.0001)),
+                        self.__convLayer(filters, 3, "selu", kernelInit='lecun_normal', kernelReg=keras.regularizers.l2(0.0001)),
+                        keras.layers.GlobalAveragePooling2D(),
+                        keras.layers.Reshape((1,1,filters)),
+                        keras.layers.Dense(filters // 16, activation='selu', kernel_initializer='lecun_normal', use_bias=False, kernel_regularizer=keras.regularizers.l1(0.0001)),
+                        keras.layers.Dense(filters, activation='sigmoid', kernel_initializer='lecun_normal', use_bias=False, kernel_regularizer=keras.regularizers.l1(0.0001)),
+                        keras.layers.Multiply()]
+        return self.__RESEBlock(hiddenLayers)
+    def __gobalPoolLayer(self):
+        return keras.layers.GlobalAveragePooling2D()
     def __outputLayer(self, name, neurons, actFunc):
         return keras.layers.Dense(neurons, activation=actFunc, name=name)
     def __bnLayer(self):
@@ -191,23 +228,29 @@ class NeuralNet():
     def build(self, X_train):
         self.model = keras.models.Sequential()
         self.model.add(self.__inputLayer('input', X_train))
-        self.model.add(self.__hiddenLayer(4000, 'selu', 'lecun_normal', kernelReg=keras.regularizers.l1(0.0001)))
-        self.model.add(self.__hiddenLayer(4000, 'selu', 'lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
-        self.model.add(self.__hiddenLayer(2000, 'selu', 'lecun_normal', kernelReg=keras.regularizers.l2(0.0001)))
-        self.model.add(self.__hiddenLayer(2000, 'selu', 'lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
-        self.model.add(self.__hiddenLayer(1000, 'selu', 'lecun_normal', kernelReg=keras.regularizers.l2(0.0001)))
-        self.model.add(self.__hiddenLayer(1000, 'selu', 'lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
-        self.model.add(self.__hiddenLayer(500, 'selu', 'lecun_normal', kernelReg=keras.regularizers.l2(0.0001)))
-        self.model.add(self.__hiddenLayer(500, 'selu', 'lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
-        self.model.add(self.__hiddenLayer(250, 'selu', 'lecun_normal', kernelReg=keras.regularizers.l2(0.0001)))
-        self.model.add(self.__hiddenLayer(250, 'selu', 'lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
-        self.model.add(self.__hiddenLayer(125, 'selu', 'lecun_normal', kernelReg=keras.regularizers.l2(0.0001)))
-        self.model.add(self.__hiddenLayer(125, 'selu', 'lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
-        self.model.add(self.__hiddenLayer(60, 'selu', 'lecun_normal', kernelReg=keras.regularizers.l2(0.0001)))
-        self.model.add(self.__hiddenLayer(60, 'selu', 'lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
-        self.model.add(self.__hiddenLayer(30, 'selu', 'lecun_normal'))
+        self.model.add(self.__convLayer(4, 11, "selu", kernelInit='lecun_normal', kernelReg=keras.regularizers.l2(0.0001)))
+        self.model.add(self.__convLayer(8, 9, "selu", kernelInit='lecun_normal', kernelReg=keras.regularizers.l2(0.0001)))
+        self.model.add(self.__lrnLayer(4))
+        self.model.add(self.__maxPoolLayer())
+        self.model.add(self.__convLayer(16, 1, "selu", kernelInit='lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
+        self.model.add(self.__convLayer(16, 7, "selu", kernelInit='lecun_normal', kernelReg=keras.regularizers.l2(0.0001)))
+        self.model.add(self.__convLayer(32, 1, "selu", kernelInit='lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
+        self.model.add(self.__convLayer(32, 5, "selu", kernelInit='lecun_normal', kernelReg=keras.regularizers.l2(0.0001)))
+        self.model.add(self.__lrnLayer(4))
+        self.model.add(self.__maxPoolLayer())
+        self.model.add(self.__convLayer(64, 1, "selu", kernelInit='lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
+        self.model.add(self.__RESEBlockLayer(64))
+        self.model.add(self.__maxPoolLayer())
+        self.model.add(self.__convLayer(128, 1, "selu", kernelInit='lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
+        self.model.add(self.__RESEBlockLayer(128))
+        self.model.add(self.__maxPoolLayer())
+        self.model.add(self.__convLayer(256, 1, "selu", kernelInit='lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
+        self.model.add(self.__RESEBlockLayer(256))
+        self.model.add(self.__maxPoolLayer())
+        self.model.add(self.__gobalPoolLayer())
+        self.model.add(self.__denseLayer(64, 'selu', 'lecun_normal'))
         self.model.add(self.__dropoutLayer(0.25, 'Alpha'))
-        self.model.add(self.__hiddenLayer(30, 'selu', 'lecun_normal'))
+        self.model.add(self.__denseLayer(16, 'selu', 'lecun_normal'))
         self.model.add(self.__dropoutLayer(0.25, 'Alpha'))
         self.model.add(self.__outputLayer('output', 10, 'softmax'))
     
@@ -267,7 +310,7 @@ class NeuralNet():
                             'loss': "sparse_categorical_crossentropy",
                             'metrics': ["accuracy"],
                             'lrFinder': (0.0001, 10.0, 2),
-                            'batchSize': 1000,
+                            'batchSize': 100,
                             'eStopPat': 10,
                             'scheduler': '1Cycle',
                             'epochs': 15}
@@ -290,13 +333,16 @@ class NeuralNet():
         else: preds = self.model.predict(newFeVec)
         return preds.argmax(axis=-1)
 
+### ==== ACTUAL IMPLEMENTATION ==== ###
+
 cifar = keras.datasets.cifar10
 (X_train_full, Y_train_full), (X_test, Y_test) = cifar.load_data()
 
 preProcess = PreProcess()
 X_train_full = preProcess.perform(X_train_full)
+X_train_full = X_train_full.reshape(X_train_full.shape[0], 32, 32, 3)
 Y_train_full = Y_train_full.ravel()
-print("PreProcessed Attrs: ", X_train_full.shape)
+print("PreProcessed Attrs: ", X_train_full[0])
 print("PreProcessed Labels: ", Y_train_full.shape)
 
 validationSplit = ValidationSplit(0.2)
@@ -310,7 +356,9 @@ neuralNet = NeuralNet()
 neuralNet.assemble((X_train, Y_train), (X_valid, Y_valid))
 neuralNet.plotLearningCurve()
 
-preds = neuralNet.predict(preProcess.perform(X_test, False))
+X_test = preProcess.perform(X_test, False)
+X_test = X_test.reshape(X_test.shape[0], 32, 32, 3)
+preds = neuralNet.predict(X_test, 20)
 Y_test = Y_test.ravel()
 accuracy = np.round((np.sum(preds == Y_test) / len(Y_test)), 4)
 print("Model Accuracy:", accuracy)
