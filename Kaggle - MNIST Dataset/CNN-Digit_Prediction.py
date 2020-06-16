@@ -219,27 +219,21 @@ class NeuralNet():
     def build(self, X_train):
         self.model = keras.models.Sequential()
         self.model.add(self.__inputLayer('input', X_train))
-        self.model.add(self.__convLayer(16, 9, "selu", kernelInit='lecun_normal', kernelReg=keras.regularizers.l2(0.0001)))
-        self.model.add(self.__convLayer(32, 7, "selu", kernelInit='lecun_normal', kernelReg=keras.regularizers.l2(0.0001)))
-        self.model.add(self.__lrnLayer(4))
-        self.model.add(self.__maxPoolLayer())
+        self.model.add(self.__convLayer(32, 7, "selu", kernelInit='lecun_normal', kernelReg=keras.regularizers.l1(0.0001)))
+        self.model.add(self.__lrnLayer(1))
+        self.model.add(self.__maxPoolLayer(3))
         self.model.add(self.__convLayer(64, 1, "selu", kernelInit='lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
-        self.model.add(self.__convLayer(64, 5, "selu", kernelInit='lecun_normal', kernelReg=keras.regularizers.l2(0.0001)))
-        self.model.add(self.__convLayer(64, 1, "selu", kernelInit='lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
-        self.model.add(self.__convLayer(64, 3, "selu", kernelInit='lecun_normal', kernelReg=keras.regularizers.l2(0.0001)))
-        self.model.add(self.__lrnLayer(4))
-        self.model.add(self.__maxPoolLayer())
+        self.model.add(self.__convLayer(64, 5, "selu", kernelInit='lecun_normal', kernelReg=keras.regularizers.l1(0.0001)))
+        self.model.add(self.__lrnLayer(3))
+        self.model.add(self.__maxPoolLayer(3))
         self.model.add(self.__convLayer(128, 1, "selu", kernelInit='lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
         self.model.add(self.__RESEBlockLayer(128))
-        self.model.add(self.__maxPoolLayer())
-        self.model.add(self.__convLayer(256, 1, "selu", kernelInit='lecun_normal', kernelConst=keras.constraints.MaxNorm(1000.)))
-        self.model.add(self.__RESEBlockLayer(256))
-        self.model.add(self.__maxPoolLayer())
+        self.model.add(self.__maxPoolLayer(3))
         self.model.add(self.__gobalPoolLayer())
         self.model.add(self.__denseLayer(64, 'selu', 'lecun_normal'))
         self.model.add(self.__dropoutLayer(0.25, 'Alpha'))
         self.model.add(self.__denseLayer(16, 'selu', 'lecun_normal'))
-        self.model.add(self.__dropoutLayer(0.25, 'Alpha'))
+        self.model.add(self.__dropoutLayer(0.15, 'Alpha'))
         self.model.add(self.__outputLayer('output', 10, 'softmax'))
     
     def get_Info(self, info):
@@ -301,7 +295,7 @@ class NeuralNet():
                             'batchSize': 100,
                             'eStopPat': 15,
                             'scheduler': '1Cycle',
-                            'epochs': 30}
+                            'epochs': 50}
         
         self.findOptLR(trainSet, valSet)
         save_best = keras.callbacks.ModelCheckpoint("CNN.h5", save_best_only=True)
@@ -336,7 +330,7 @@ Y_train_full = trainLabels.values.ravel()
 print("Scaled Attrs: ", X_train_full.shape)
 print("Scaled Labels: ", Y_train_full.shape)
 
-validationSplit = ValidationSplit(0.15)
+validationSplit = ValidationSplit(0.2)
 X_train, X_valid, Y_train, Y_valid = validationSplit.perform(X_train_full, Y_train_full)
 
 print("Training Attrs: ", X_train.shape)
