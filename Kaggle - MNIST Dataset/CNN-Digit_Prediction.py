@@ -1,12 +1,38 @@
 import os
+import random
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 from tensorflow import keras
 import matplotlib.pyplot as plt
-from PIL import Image, ImageEnhance
+from scipy.ndimage.interpolation import shift
 from sklearn.preprocessing import StandardScaler
 
+class Enhance():
+    def __shift_image(self, image, dx, dy):
+        image = image.reshape((28, 28))
+        shifted_image = shift(image, [dy, dx], cval=0, mode="constant")
+        return shifted_image.reshape([-1])
+
+    def perform(self, X_train, Y_train):
+        cols = X_train.columns.values.tolist()
+        X_train = X_train.to_numpy()
+        Y_train = Y_train.to_numpy()
+        X_train_augmented = [image for image in X_train]
+        Y_train_augmented = [label for label in Y_train]
+        shifts = [(1, 0), (-1, 0), (0, 1), (0, -1), (2, 0), (-2, 0), (0, 2), (0, -2), (3, 0), (-3, 0), (0, 3), (0, -3)]
+        for dx, dy in random.sample(shifts, 4):
+            for image, label in zip(X_train, Y_train):
+                X_train_augmented.append(self.__shift_image(image, dx, dy))
+                Y_train_augmented.append(label)
+        X_train_augmented = np.array(X_train_augmented)
+        Y_train_augmented = np.array(Y_train_augmented)
+        shuffle_idx = np.random.permutation(len(X_train_augmented))
+        X_train = X_train_augmented[shuffle_idx]
+        Y_train = Y_train_augmented[shuffle_idx]
+        X_train = pd.DataFrame(X_train, columns=cols)
+        Y_train = pd.DataFrame(Y_train)
+        return X_train, Y_train
 
 class ScaleFeature():
     def perform(self, dataFrame, training=True):
@@ -292,10 +318,10 @@ class NeuralNet():
                             'loss': "sparse_categorical_crossentropy",
                             'metrics': ["accuracy"],
                             'lrFinder': (0.0001, 10.0, 2),
-                            'batchSize': 100,
+                            'batchSize': 500,
                             'eStopPat': 15,
                             'scheduler': '1Cycle',
-                            'epochs': 50}
+                            'epochs': 30}
         
         self.findOptLR(trainSet, valSet)
         save_best = keras.callbacks.ModelCheckpoint("CNN.h5", save_best_only=True)
@@ -321,6 +347,9 @@ trainSet = pd.read_csv("train.csv", sep=",")
 labels = ['label']
 trainLabels = trainSet[labels].astype(int).astype('category')
 trainAttrs = trainSet.drop(labels, axis=1)
+
+enhance = Enhance()
+trainAttrs, trainLabels = enhance.perform(trainAttrs, trainLabels)
 
 preProcess = PreProcess()
 X_train_full = preProcess.perform(trainAttrs)
