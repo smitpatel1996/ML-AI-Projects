@@ -49,4 +49,4 @@ class MaskRCNNnet():
     
 maskRCNNnet = MaskRCNNnet()
 maskRCNNnet.create()
-maskRCNNnet.test("sample.jpg")
+maskRCNNnet.test("test.jpg")
