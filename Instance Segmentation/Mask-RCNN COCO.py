@@ -9,12 +9,9 @@ class DetectionConfig(Config):
     GPU_COUNT = 1
     IMAGES_PER_GPU = 1
     NUM_CLASSES = 1 + 80
-    IMAGE_MIN_DIM = 800
+    IMAGE_MIN_DIM = 32
     IMAGE_MAX_DIM = 2048
-    RPN_ANCHOR_SCALES = (32, 64, 128, 256, 512)
-    TRAIN_ROIS_PER_IMAGE = 128
-    STEPS_PER_EPOCH = 1000
-    VALIDATION_STEPS = 50
+    RPN_ANCHOR_SCALES = (64, 128, 256, 512, 1024)
 
 class MaskRCNNnet():
     def __init__(self):
