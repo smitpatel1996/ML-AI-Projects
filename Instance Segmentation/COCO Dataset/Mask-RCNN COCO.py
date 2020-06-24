@@ -46,7 +46,6 @@ class MaskRCNNnet():
         r = results[0]
         visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'], self.class_names, r['scores'])
     
-    
 maskRCNNnet = MaskRCNNnet()
 maskRCNNnet.create()
 maskRCNNnet.test("test.jpg")
