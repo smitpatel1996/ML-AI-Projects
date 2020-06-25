@@ -127,7 +127,6 @@ class WeightReader:
 		for i in range(106):
 			try:
 				conv_layer = model.get_layer('conv_' + str(i))
-				print("loading weights of convolution #" + str(i))
 				if i not in [81, 93, 105]:
 					norm_layer = model.get_layer('bnorm_' + str(i))
 					size = np.prod(norm_layer.get_weights()[0].shape)
@@ -148,7 +147,7 @@ class WeightReader:
 					kernel = kernel.transpose([2,3,1,0])
 					conv_layer.set_weights([kernel])
 			except ValueError:
-				print("no convolution #" + str(i))
+				continue
 
 	def reset(self):
 		self.offset = 0

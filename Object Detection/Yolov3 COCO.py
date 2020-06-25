@@ -1,5 +1,8 @@
+import tensorflow as tf
+from tensorflow import keras
 from model import saveYOLOv3Model
 from infer import inferObjects
+from datetime import datetime
 
 class Yolov3Net():
     def __init__(self):
@@ -20,12 +23,18 @@ class Yolov3Net():
                'sink', 'refrigerator', 'book', 'clock', 'vase', 'scissors',
                'teddy bear', 'hair drier', 'toothbrush']
         
-    def create(self):
+    def create(self, filename):
         self.model = saveYOLOv3Model.perform(None, self.weightsFile)
+        self.model.save(filename)
     
-    def test(self, test):
-        inferObjects.perform(None, self.model, self.class_names, test)
+    def test(self, model, test):
+        self.model = model
+        self.model.summary()
+        now = datetime.now().strftime("%H:%M:%S")
+        print("Current Time =", now)
+        inferObjects.perform(None, self.model, self.class_names, test, 0.7, 0.3)
+        now = datetime.now().strftime("%H:%M:%S")
+        print("Current Time =", now)
     
 yoloNet = Yolov3Net()
-yoloNet.create()
-yoloNet.test("sample.jpg")
+yoloNet.test(keras.models.load_model("yoloCOCO.h5"), "sample.jpg")

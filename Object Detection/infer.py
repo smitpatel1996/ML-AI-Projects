@@ -1,3 +1,4 @@
+import cv2
 import numpy as np
 from numpy import expand_dims
 from keras.models import load_model
@@ -131,9 +132,7 @@ def get_boxes(boxes, labels, thresh):
     v_boxes, v_labels, v_scores = list(), list(), list()
     # enumerate all boxes
     for box in boxes:
-        # enumerate all possible labels
         for i in range(len(labels)):
-            # check if the threshold for this label is high enough
             if box.classes[i] > thresh:
                 v_boxes.append(box)
                 v_labels.append(labels[i])
@@ -143,46 +142,29 @@ def get_boxes(boxes, labels, thresh):
 
 # draw all results
 def draw_boxes(filename, v_boxes, v_labels, v_scores):
-    # load the image
-    data = pyplot.imread(filename)
-    # plot the image
-    pyplot.imshow(data)
-    # get the context for drawing boxes
-    ax = pyplot.gca()
-    # plot each box
+    image = cv2.imread(filename)
+    colors = np.random.uniform(0, 255, size=(len(v_boxes), 3))
     for i in range(len(v_boxes)):
         box = v_boxes[i]
-        # get coordinates
         y1, x1, y2, x2 = box.ymin, box.xmin, box.ymax, box.xmax
-        # calculate width and height of the box
-        width, height = x2 - x1, y2 - y1
-        # create the shape
-        rect = Rectangle((x1, y1), width, height, fill=False, color='white')
-        print(rect)
-        # draw the box
-        ax.add_patch(rect)
-        # draw text and score in top left corner
+        image = cv2.rectangle(image, (x1,y1), (x2,y2), colors[i], 2)
         label = "%s (%.3f)" % (v_labels[i], v_scores[i])
-        pyplot.text(x1, y1, label, color='white')
-    # show the plot
-    pyplot.show()
+        image = cv2.putText(image, label, (x1,y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, colors[i], 2)
+    cv2.imwrite("object-detection.jpg", image)
 
 class inferObjects():
-    def perform(self, model, classNames, testFile):
+    def perform(self, model, classNames, testFile, conf_threshold, nms_threshold):
         input_w, input_h = 416, 416
         photo_filename = testFile
         image, image_w, image_h = load_image_pixels(photo_filename, (input_w, input_h))
         yhat = model.predict(image)
-        print([a.shape for a in yhat])
         anchors = [[116,90, 156,198, 373,326], [30,61, 62,45, 59,119], [10,13, 16,30, 33,23]]
-        class_threshold = 0.75
+        class_threshold = conf_threshold
         boxes = list()
         for i in range(len(yhat)):
             boxes += decode_netout(yhat[i][0], anchors[i], class_threshold, input_h, input_w)
-            correct_yolo_boxes(boxes, image_h, image_w, input_h, input_w)
-            do_nms(boxes, 0.5)
+        correct_yolo_boxes(boxes, image_h, image_w, input_h, input_w)
+        do_nms(boxes, nms_threshold)
         labels = classNames
         v_boxes, v_labels, v_scores = get_boxes(boxes, labels, class_threshold)
-        for i in range(len(v_boxes)):
-            print(v_labels[i], v_scores[i])
         draw_boxes(photo_filename, v_boxes, v_labels, v_scores)
