@@ -45,9 +45,10 @@ class Enhance():
     def perform(self, npInp, training=True):
         self.max_length = 250
         if(training):
-            self.tokenizer = keras.preprocessing.text.Tokenizer(num_words=5000, oov_token="<OOV>")
+            size_of_vocab = 5000
+            self.tokenizer = keras.preprocessing.text.Tokenizer(num_words=size_of_vocab, oov_token="<OOV>")
             self.tokenizer.fit_on_texts(npInp)
-            self.tokenizer.word_index = dict(sorted(self.tokenizer.word_index.items(), key = itemgetter(1))[:5000]) 
+            self.tokenizer.word_index = dict(sorted(self.tokenizer.word_index.items(), key = itemgetter(1))[:size_of_vocab]) 
             self.vocab_size = len(self.tokenizer.word_index) + 1
         encoded = self.tokenizer.texts_to_sequences(npInp)
         paddedVecs = keras.preprocessing.sequence.pad_sequences(encoded, maxlen=self.max_length, padding='post', truncating='post')
@@ -193,7 +194,7 @@ class NeuralNet():
     
     def __denseLayer(self, neurons, actFunc, kernelInit=None, kernelReg=None, kernelConst=None):
         return keras.layers.Dense(neurons, activation=actFunc, kernel_initializer=kernelInit, kernel_regularizer=kernelReg, kernel_constraint=kernelConst)
-    def __EmbeddingLayer(self, output_dim, embeddingParams):
+    def __EmbeddingLayer(self, embeddingParams, output_dim):
         return keras.layers.Embedding(embeddingParams[0], output_dim, input_length=embeddingParams[1], mask_zero=True)
     def __RNNLayer(self, neurons, dp, recDp, returnSeq=True, cell="GRU"):
         if(cell == "GRU"):
@@ -205,7 +206,7 @@ class NeuralNet():
     
     def build(self, X_train, embeddingParams):
         self.model = keras.models.Sequential()
-        self.model.add(self.__EmbeddingLayer(64, embeddingParams))
+        self.model.add(self.__EmbeddingLayer(embeddingParams, 64))
         self.model.add(self.__RNNLayer(64, 0.2, 0.2))
         self.model.add(self.__RNNLayer(32, 0.1, 0.1, False))
         self.model.add(self.__denseLayer(1, 'sigmoid'))
@@ -267,7 +268,7 @@ class NeuralNet():
                             'metrics': ["accuracy"],
                             'lrFinder': (0.0001, 1000.0, 5),
                             'batchSize': 500,
-                            'eStopPat': 5,
+                            'eStopPat': 10,
                             'scheduler': '1Cycle',
                             'epochs': 20}
         
@@ -313,11 +314,13 @@ def remove_tags(text):
     return TAG_RE.sub('', text)
 
 def firstWords(inp):
-    inp = rmvStop(inp)
     sentence = remove_tags(inp)
     sentence = re.sub(r'https:\/\/[a-zA-Z]*\.com',' ',sentence)
+    sentence = re.sub(r'\s+',' ',sentence)
+    sentence = re.sub(r"\b[a-zA-Z]\b", ' ', sentence)
     sentence = re.sub(r'\W+',' ',sentence)
     sentence = sentence.lower()
+    sentence = rmvStop(sentence)
     return sentence
 
 X_train = np.array(list(map(lambda x: firstWords(x), X_train)))
