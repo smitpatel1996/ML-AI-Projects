@@ -45,9 +45,9 @@ class Enhance():
     def perform(self, npInp, training=True):
         self.max_length = 250
         if(training):
-            self.tokenizer = keras.preprocessing.text.Tokenizer(num_words=7500, oov_token="<OOV>")
+            self.tokenizer = keras.preprocessing.text.Tokenizer(num_words=5000, oov_token="<OOV>")
             self.tokenizer.fit_on_texts(npInp)
-            self.tokenizer.word_index = dict(sorted(self.tokenizer.word_index.items(), key = itemgetter(1))[:7500]) 
+            self.tokenizer.word_index = dict(sorted(self.tokenizer.word_index.items(), key = itemgetter(1))[:5000]) 
             self.vocab_size = len(self.tokenizer.word_index) + 1
         encoded = self.tokenizer.texts_to_sequences(npInp)
         paddedVecs = keras.preprocessing.sequence.pad_sequences(encoded, maxlen=self.max_length, padding='post', truncating='post')
@@ -206,8 +206,8 @@ class NeuralNet():
     def build(self, X_train, embeddingParams):
         self.model = keras.models.Sequential()
         self.model.add(self.__EmbeddingLayer(64, embeddingParams))
-        self.model.add(self.__RNNLayer(64, 0.1, 0.1))
-        self.model.add(self.__RNNLayer(16, 0.05, 0.05, False))
+        self.model.add(self.__RNNLayer(64, 0.2, 0.2))
+        self.model.add(self.__RNNLayer(32, 0.1, 0.1, False))
         self.model.add(self.__denseLayer(1, 'sigmoid'))
                
     def get_Info(self, info):
@@ -267,9 +267,9 @@ class NeuralNet():
                             'metrics': ["accuracy"],
                             'lrFinder': (0.0001, 1000.0, 5),
                             'batchSize': 500,
-                            'eStopPat': 15,
+                            'eStopPat': 5,
                             'scheduler': '1Cycle',
-                            'epochs': 25}
+                            'epochs': 20}
         
         self.findOptLR(trainSet, valSet)
         save_best = keras.callbacks.ModelCheckpoint("SentimentAnalysis-RNN.h5", save_best_only=True)
