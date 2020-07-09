@@ -55,7 +55,7 @@ class Enhance():
         return paddedVecs
     
     def getEmbeddingParams(self):
-        return (self.vocab_size, self.max_length)
+        return (self.vocab_size, self.max_length, self.tokenizer)
 
 class ValidationSplit():
     def __init__(self, val_size):
@@ -192,9 +192,27 @@ class NeuralNet():
                 if self._update_momentum: print(" - lr: %0.5f - momentum: %0.2f " % (self.history['lr'][-1], self.history['momentum'][-1]))
                 else: print(" - lr: %0.5f " % (self.history['lr'][-1]))
     
+    def __GloveEmbeddings(self, filename, embeddingParams, output_dim):
+        embeddings_index = dict()
+        f = open(filename)
+        for line in f:
+            values = line.split()
+            word = values[0]
+            coefs = np.asarray(values[1:], dtype='float32')
+            embeddings_index[word] = coefs
+        f.close()
+        embedding_matrix = np.zeros((embeddingParams[0], output_dim))
+        for word, i in embeddingParams[2].word_index.items():
+            embedding_vector = embeddings_index.get(word)
+            if embedding_vector is not None:
+                embedding_matrix[i] = embedding_vector
+        return embedding_matrix    
     def __denseLayer(self, neurons, actFunc, kernelInit=None, kernelReg=None, kernelConst=None):
         return keras.layers.Dense(neurons, activation=actFunc, kernel_initializer=kernelInit, kernel_regularizer=kernelReg, kernel_constraint=kernelConst)
-    def __EmbeddingLayer(self, embeddingParams, output_dim):
+    def __EmbeddingLayer(self, embeddingParams, output_dim, preTrained=False):
+        if(preTrained):
+            embedding_matrix = self.__GloveEmbeddings('glove.6B.50d.txt', embeddingParams, output_dim)
+            return keras.layers.Embedding(embeddingParams[0], output_dim, input_length=embeddingParams[1], mask_zero=True, weights=[embedding_matrix], trainable=False)
         return keras.layers.Embedding(embeddingParams[0], output_dim, input_length=embeddingParams[1], mask_zero=True)
     def __RNNLayer(self, neurons, dp, recDp, returnSeq=True, cell="GRU"):
         if(cell == "GRU"):
@@ -206,9 +224,10 @@ class NeuralNet():
     
     def build(self, X_train, embeddingParams):
         self.model = keras.models.Sequential()
-        self.model.add(self.__EmbeddingLayer(embeddingParams, 64))
+        self.model.add(self.__EmbeddingLayer(embeddingParams, 50, True))
         self.model.add(self.__RNNLayer(64, 0.2, 0.2))
-        self.model.add(self.__RNNLayer(32, 0.1, 0.1, False))
+        self.model.add(self.__RNNLayer(32, 0.15, 0.15))
+        self.model.add(self.__RNNLayer(16, 0.1, 0.1, False))
         self.model.add(self.__denseLayer(1, 'sigmoid'))
                
     def get_Info(self, info):
@@ -270,7 +289,7 @@ class NeuralNet():
                             'batchSize': 500,
                             'eStopPat': 10,
                             'scheduler': '1Cycle',
-                            'epochs': 20}
+                            'epochs': 50}
         
         self.findOptLR(trainSet, valSet)
         save_best = keras.callbacks.ModelCheckpoint("SentimentAnalysis-RNN.h5", save_best_only=True)
