@@ -43,9 +43,9 @@ class BinarizeLabels():
     
 class Enhance(): 
     def perform(self, npInp, training=True):
-        self.max_length = 250
+        self.max_length = 300
         if(training):
-            size_of_vocab = 5000
+            size_of_vocab = 10000
             self.tokenizer = keras.preprocessing.text.Tokenizer(num_words=size_of_vocab, oov_token="<OOV>")
             self.tokenizer.fit_on_texts(npInp)
             self.tokenizer.word_index = dict(sorted(self.tokenizer.word_index.items(), key = itemgetter(1))[:size_of_vocab]) 
