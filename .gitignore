@@ -1,4 +1,4 @@
-*.csv
-*.h5
-*.txt
-*.weights
+Object Detection/yoloCOCO.h5
+Object Detection/yolov3.weights
+Kaggle - IMDB Dataset/IMDB_Dataset.csv
+Kaggle - IMDB Dataset/glove.6B.50d.txt
